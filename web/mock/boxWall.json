@@ -1,0 +1,35 @@
+{
+  "recommendations": [
+    {
+      "rule": "Final Stint Attack",
+      "action": {
+        "deploy_straight": 95,
+        "deploy_corner": 85,
+        "harvest": 20
+      },
+      "confidence": 0.85,
+      "rationale": "Deploys saved energy for a maximum attack in the closing laps when positions are being finalized."
+    },
+    {
+      "rule": "Low Battery Recovery Mode",
+      "action": {
+        "deploy_straight": 30,
+        "deploy_corner": 20,
+        "harvest": 90
+      },
+      "confidence": 0.98,
+      "rationale": "Prioritizes energy harvesting to avoid critical battery depletion and significant lap time penalties."
+    },
+    {
+      "rule": "Mid-Race Energy Conservation",
+      "action": {
+        "deploy_straight": 50,
+        "deploy_corner": 40,
+        "harvest": 75
+      },
+      "confidence": 0.88,
+      "rationale": "Builds an energy surplus during the stable mid-phase of the race for a powerful final stint."
+    }
+  ],
+  "latency_ms": 88.4
+}
