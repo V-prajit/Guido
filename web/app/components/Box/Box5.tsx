@@ -24,13 +24,31 @@ export default function Box5({ className, style, children }: BoxProps) {
   return (
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
-      {children ? (
-        <div className="relative z-[1] flex flex-1 flex-col p-6">{children}</div>
-      ) : (
-        <span className="relative z-[1] p-6 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-          Box 5
-        </span>
-      )}
+      <div className="relative z-[1] flex flex-1 flex-col p-6">
+        <h3 className="text-sm font-bold text-text-primary mb-4 tracking-wide">PLAYER TELEMETRY</h3>
+        <div className="space-y-2">
+          <div className="flex justify-between">
+            <span className="text-xs text-text-secondary">Lap</span>
+            <span className="text-sm font-bold text-text-primary">15/57</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-xs text-text-secondary">Position</span>
+            <span className="text-sm font-bold text-text-primary">P4</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-xs text-text-secondary">Battery</span>
+            <span className="text-sm font-bold text-text-primary">45%</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-xs text-text-secondary">Tires</span>
+            <span className="text-sm font-bold text-text-primary">62%</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-xs text-text-secondary">Fuel</span>
+            <span className="text-sm font-bold text-text-primary">28kg</span>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

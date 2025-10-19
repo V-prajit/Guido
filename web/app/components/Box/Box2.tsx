@@ -24,13 +24,16 @@ export default function Box2({ className, style, children }: BoxProps) {
   return (
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
-      {children ? (
-        <div className="relative z-[1] flex flex-1 flex-col p-6">{children}</div>
-      ) : (
-        <span className="relative z-[1] p-6 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-          Box 2
-        </span>
-      )}
+      <div className="relative z-[1] flex flex-1 flex-col p-6">
+        <h3 className="text-sm font-bold text-text-primary mb-4 tracking-wide">SIMULATION PROGRESS</h3>
+        <div className="space-y-3">
+          <p className="text-2xl font-bold text-text-primary">80/100</p>
+          <div className="w-full h-2 bg-text-primary/20 rounded-full overflow-hidden">
+            <div className="h-full bg-text-primary w-4/5 transition-all duration-300"></div>
+          </div>
+          <p className="text-xs text-text-secondary">Est: 2m 15s</p>
+        </div>
+      </div>
     </section>
   );
 }
