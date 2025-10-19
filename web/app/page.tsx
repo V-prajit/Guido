@@ -12,7 +12,7 @@ export default function Home() {
     <main className="min-h-screen bg-gray-900 text-white p-8">
       <header className="mb-8">
         <h1 className="text-5xl font-bold mb-2">Strategy Gym 2026</h1>
-        <p className="text-gray-400">F1 Energy Management Strategy Discovery</p>
+        <p className="text-gray-400 italic">F1 Energy Management Strategy Discovery</p>
       </header>
 
       <nav className="flex gap-4 mb-8 border-b border-gray-700">
