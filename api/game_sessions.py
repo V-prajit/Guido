@@ -99,6 +99,9 @@ class GameSessionManager:
         """Create a new game session"""
         session_id = str(uuid.uuid4())
 
+        # DEMO MODE: Force rain on lap 3 for consistent demo experience
+        rain_lap = 3
+
         # Initialize player state (EQUAL START - no grid advantage)
         player = PlayerState(
             position=0,  # Will be determined after first lap
