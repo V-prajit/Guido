@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: "Guido",
   description:
     "Guido • F1-inspired analytics blending large-scale simulation, Gemini synthesis, and pit wall decision support.",
+  icons: {
+    icon: "/guido.png",
+  },
 };
 
 export default function RootLayout({
