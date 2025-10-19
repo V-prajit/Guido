@@ -1,0 +1,32 @@
+{
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rule": {"type": "string"},
+          "condition": {"type": "string"},
+          "action": {
+            "type": "object",
+            "properties": {
+              "deploy_straight": {"type": "number", "min": 0, "max": 100},
+              "deploy_corner": {"type": "number", "min": 0, "max": 100},
+              "harvest": {"type": "number", "min": 0, "max": 100},
+              "aero_mode": {"type": "string", "enum": ["low_drag", "high_drag"]},
+              "boost": {"type": "boolean"}
+            }
+          },
+          "confidence": {"type": "number", "min": 0, "max": 1},
+          "uplift_win_pct": {"type": "number"},
+          "rationale": {"type": "string", "maxLength": 200},
+          "caveats": {"type": "string", "maxLength": 150}
+        },
+        "required": ["rule", "condition", "action", "confidence", "uplift_win_pct", "rationale"]
+      }
+    },
+    "generated_at": {"type": "string"},
+    "num_simulations": {"type": "integer"}
+  }
+}
