@@ -24,13 +24,23 @@ export default function Box3({ className, style, children }: BoxProps) {
   return (
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
-      {children ? (
-        <div className="relative z-[1] flex flex-1 flex-col p-6">{children}</div>
-      ) : (
-        <span className="relative z-[1] p-6 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-          Box 3
-        </span>
-      )}
+      <div className="relative z-[1] flex flex-1 flex-col p-6">
+        <h3 className="text-sm font-bold text-text-primary mb-4 tracking-wide">OPPONENT STRATEGY</h3>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between border-b border-border/20 pb-2">
+            <span className="text-sm text-text-primary">Early Pit</span>
+            <span className="text-xs text-text-secondary">Verstappen</span>
+          </div>
+          <div className="flex items-center justify-between border-b border-border/20 pb-2">
+            <span className="text-sm text-text-primary">Fuel Management</span>
+            <span className="text-xs text-text-secondary">Hamilton</span>
+          </div>
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-sm text-text-primary">Tire Conservation</span>
+            <span className="text-xs text-text-secondary">Leclerc</span>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
