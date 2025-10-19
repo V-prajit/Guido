@@ -10,8 +10,8 @@ const baseClasses =
   'relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border bg-bg-secondary text-text-primary shadow-lg shadow-black/20';
 
 const defaultLayout: CSSProperties = {
-  gridColumn: '4 / span 9',
-  gridRow: '9 / span 4',
+  gridColumn: '10 / span 3',
+  gridRow: '6 / span 3',
 };
 
 const overlayStyle: CSSProperties = {
