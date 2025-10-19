@@ -1,6 +1,6 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { Playbook, Rule } from '../types';
+import { Playbook } from '../types';
 import RuleCard from './RuleCard';
 import mockData from '../mock/playbookView.json';
 

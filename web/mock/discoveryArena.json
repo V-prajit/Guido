@@ -1,0 +1,86 @@
+{
+  "run_id": "RUN-HYPERION-26A",
+  "scenarios_completed": 1000,
+  "elapsed_sec": 8.4,
+  "scenarios_per_sec": 119,
+  "energy_reclaimed_mj": 1.9,
+  "peak_tyre_surface_temp": 812,
+  "telemetry": [
+    {
+      "phase": "ignition",
+      "progress": 8,
+      "scenarios": 82,
+      "message": "Systems check: calibrating hybrid deploy maps.",
+      "delay_ms": 350
+    },
+    {
+      "phase": "formation",
+      "progress": 22,
+      "scenarios": 220,
+      "message": "Lights out—launching 8 strategy agents.",
+      "delay_ms": 420
+    },
+    {
+      "phase": "sector-one",
+      "progress": 46,
+      "scenarios": 460,
+      "message": "ERS harvest models converging on braking zones.",
+      "delay_ms": 520
+    },
+    {
+      "phase": "sector-two",
+      "progress": 71,
+      "scenarios": 710,
+      "message": "Detecting lift-coast opportunities in turbulence traffic.",
+      "delay_ms": 620
+    },
+    {
+      "phase": "sector-three",
+      "progress": 90,
+      "scenarios": 900,
+      "message": "Validating battery state envelopes under rain offsets.",
+      "delay_ms": 640
+    },
+    {
+      "phase": "chequered",
+      "progress": 100,
+      "scenarios": 1000,
+      "message": "Chequered flag—synthesizing telemetry for Gemini handoff.",
+      "delay_ms": 560
+    }
+  ],
+  "strategies": [
+    {
+      "codename": "Hyperdrive Δ",
+      "focus": "High-speed ERS attack",
+      "win_share": 0.36,
+      "fastest_lap_delta": -0.84,
+      "battery_margin": 0.12,
+      "color": "#FF1801"
+    },
+    {
+      "codename": "Harvest Halo",
+      "focus": "Aggressive regen in heavy traffic",
+      "win_share": 0.28,
+      "fastest_lap_delta": -0.35,
+      "battery_margin": 0.24,
+      "color": "#00A0E9"
+    },
+    {
+      "codename": "Balanced Apex",
+      "focus": "Adaptive deploy by aero trim",
+      "win_share": 0.22,
+      "fastest_lap_delta": -0.42,
+      "battery_margin": 0.18,
+      "color": "#67E8F9"
+    },
+    {
+      "codename": "Rainfall 72",
+      "focus": "Wet-weather stability from SOC buffer",
+      "win_share": 0.14,
+      "fastest_lap_delta": -0.19,
+      "battery_margin": 0.31,
+      "color": "#4ADE80"
+    }
+  ]
+}

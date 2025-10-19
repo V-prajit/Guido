@@ -1,18 +1,69 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;700&display=swap');
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700&display=swap');
+
+@import 'tailwindcss';
 
 :root {
-  --f1-red: #FF1801;
-  --f1-black: #000000;
-  --f1-white: #FFFFFF;
-  --f1-gray: #333333;
-  --f1-blue: #00A0E9;
+  --f1-red: #ff1801;
+  --f1-black: #050505;
+  --f1-white: #f5f5f5;
+  --f1-gray: #272727;
+  --f1-blue: #00a0e9;
 }
 
 body {
-  background-color: var(--f1-black);
-  background-image: url('/checkered.svg');
-  color: var(--f1-white);
+  background-color: #000;
+  color: #f5f5f5;
   font-family: 'Titillium Web', sans-serif;
+  background-image: radial-gradient(circle at 50% -10%, rgba(255, 24, 1, 0.12), transparent 55%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%),
+    linear-gradient(135deg, transparent 75%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 100% 100%, 18px 18px, 18px 18px;
+  background-position: 0 0, 0 0, 9px 9px;
+  background-repeat: no-repeat, repeat, repeat;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.08em;
+}
+
+input[type='range'] {
+  height: 0.5rem;
+  width: 100%;
+  cursor: pointer;
+  appearance: none;
+  border-radius: 9999px;
+  background-color: #374151;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  border: 2px solid #000;
+  background-color: var(--f1-red);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+input[type='range']:hover::-webkit-slider-thumb {
+  border-color: var(--f1-red);
+  background-color: #fff;
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  border: 2px solid #000;
+  background-color: var(--f1-red);
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+input[type='range']:hover::-moz-range-thumb {
+  border-color: var(--f1-red);
+  background-color: #fff;
 }
