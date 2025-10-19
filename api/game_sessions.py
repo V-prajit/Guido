@@ -20,14 +20,17 @@ class PlayerState:
     fuel_remaining: float  # 0-100
     lap_time: float
     cumulative_time: float
+    speed: float = 0.0  # Current speed (km/h) for visualization
+    gap_to_leader: float = 0.0  # Time gap to race leader (seconds)
+    lap_progress: float = 0.0  # Position on track 0-1 (normalized across full race)
 
     # Strategy parameters (6 variables)
-    energy_deployment: float
-    tire_management: float
-    fuel_strategy: float
-    ers_mode: float
-    overtake_aggression: float
-    defense_intensity: float
+    energy_deployment: float = 60.0
+    tire_management: float = 70.0
+    fuel_strategy: float = 65.0
+    ers_mode: float = 60.0
+    overtake_aggression: float = 50.0
+    defense_intensity: float = 50.0
 
 
 @dataclass
@@ -36,11 +39,14 @@ class OpponentState:
     name: str
     agent_type: str
     position: int
-    lap_progress: float  # 0-1 for visualization
+    lap_progress: float  # 0-1 for visualization (based on cumulative_time relative to leader)
     battery_soc: float
     tire_life: float
     fuel_remaining: float
     cumulative_time: float
+    speed: float = 0.0  # Current speed (km/h) for visualization
+    gap_to_leader: float = 0.0  # Time gap to race leader (seconds)
+    last_lap_time: float = 90.0  # Last lap time for speed calculation
 
 
 @dataclass
@@ -67,6 +73,9 @@ class GameState:
     current_decision_point: Optional[dict] = None
     decision_history: list[dict] = field(default_factory=list)
 
+    # Race control - pause/resume mechanism for decision points
+    pause_event: Optional[asyncio.Event] = None
+
     # Metadata
     created_at: float = field(default_factory=time.time)
     last_updated: float = field(default_factory=time.time)
@@ -90,14 +99,17 @@ class GameSessionManager:
         """Create a new game session"""
         session_id = str(uuid.uuid4())
 
-        # Initialize player state
+        # Initialize player state (EQUAL START - no grid advantage)
         player = PlayerState(
-            position=1,  # Start optimistically
+            position=0,  # Will be determined after first lap
             battery_soc=100.0,
             tire_life=100.0,
             fuel_remaining=100.0,
             lap_time=90.0,
-            cumulative_time=0.0,
+            cumulative_time=0.0,  # Equal start
+            speed=300.0,  # Starting speed (km/h)
+            gap_to_leader=0.0,  # No gap at start
+            lap_progress=0.0,  # Equal start on grid
             energy_deployment=60.0,
             tire_management=70.0,
             fuel_strategy=65.0,
@@ -106,7 +118,7 @@ class GameSessionManager:
             defense_intensity=50.0
         )
 
-        # Initialize AI opponents (7 opponents)
+        # Initialize AI opponents (7 opponents) - EQUAL START
         opponents = []
         opponent_names = [
             ("VerstappenStyle", "Max Verstappen"),
@@ -119,15 +131,20 @@ class GameSessionManager:
         ]
 
         for i, (agent_type, name) in enumerate(opponent_names):
+            # EQUAL START: All cars start at cumulative_time=0.0
+            # Positions will be determined naturally by lap times and strategy
             opponents.append(OpponentState(
                 name=name,
                 agent_type=agent_type,
-                position=i + 2,  # Positions 2-8
-                lap_progress=0.0,
+                position=0,  # Will be determined after first lap
+                lap_progress=0.0,  # Equal start on grid
                 battery_soc=100.0,
                 tire_life=100.0,
                 fuel_remaining=100.0,
-                cumulative_time=0.0
+                cumulative_time=0.0,  # Equal start - no grid advantage
+                speed=300.0,  # Starting speed (km/h)
+                gap_to_leader=0.0,  # No gap at start
+                last_lap_time=90.0
             ))
 
         # Create game state

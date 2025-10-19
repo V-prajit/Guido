@@ -303,6 +303,145 @@ from sim.game_loop import GameLoopOrchestrator
 from dataclasses import asdict
 
 
+def calculate_realistic_speed(
+    lap_progress: float,
+    energy_deployment: float,
+    tire_management: float,
+    battery_soc: float
+) -> float:
+    """
+    Calculate realistic F1 speed based on ACCURATE Bahrain International Circuit layout.
+
+    Bahrain GP Track (5.412 km, 15 turns, clockwise):
+    - Main straight (bottom): 0-12% - DRS zone, top speed
+    - Turn 1 braking: 12-18% - Heavy braking into first corner
+    - Turns 2-4: 18-28% - Right-side technical complex
+    - Turns 5-8: 28-40% - Top section, medium-speed
+    - Turns 9-10: 40-55% - Middle flowing section
+    - Back straight: 55-68% - Top area, second DRS candidate
+    - Turns 11-13: 68-82% - Left descent
+    - Turns 14-15: 82-92% - Final corner complex
+    - Acceleration: 92-100% - Power onto main straight
+
+    Args:
+        lap_progress: Position in lap (0-1)
+        energy_deployment: Strategy param (0-100)
+        tire_management: Strategy param (0-100)
+        battery_soc: Battery level (0-100)
+
+    Returns:
+        Speed in km/h (100-340 range for realistic braking)
+    """
+    # SECTOR 1: Start/Finish Straight + Turn 1-4 Complex (0-33%)
+    if lap_progress < 0.12:
+        # MAIN STRAIGHT (bottom of track map) - Where "You" P1 starts
+        # DRS active, maximum acceleration: 280 → 330 km/h
+        progress = lap_progress / 0.12
+        base_speed = 280 + (progress * 50)
+
+    elif lap_progress < 0.18:
+        # TURN 1: HEAVY BRAKING ZONE (end of main straight)
+        # Dramatic slowdown for tight first corner: 330 → 100 km/h
+        progress = (lap_progress - 0.12) / 0.06
+        base_speed = 330 - (progress * 230)
+
+    elif lap_progress < 0.25:
+        # STRAIGHT AFTER TURN 1: Diagonal straight up-right (toward Piastri/Norris)
+        # FAST acceleration out of Turn 1 exit: 100 → 280 km/h
+        progress = (lap_progress - 0.18) / 0.07
+        base_speed = 100 + (progress * 180)
+
+    elif lap_progress < 0.35:
+        # TECHNICAL SECTION: Hamilton/Alonso area corners (middle-right of map)
+        # Medium-speed technical: 260 → 280 km/h
+        progress = (lap_progress - 0.25) / 0.10
+        base_speed = 260 + (progress * 20)
+
+    # SECTOR 2: Middle to Top Section (35-66%)
+    elif lap_progress < 0.43:
+        # TURNS 5-8: Top-right back section
+        # Medium-speed acceleration: 280 → 305 km/h
+        progress = (lap_progress - 0.35) / 0.08
+        base_speed = 280 + (progress * 25)
+
+    elif lap_progress < 0.58:
+        # TURNS 9-10: Middle technical flowing section
+        # Maintaining momentum: 290 → 300 km/h
+        progress = (lap_progress - 0.43) / 0.15
+        base_speed = 290 + (progress * 10)
+
+    # SECTOR 3: Final Section Back to Start/Finish (58-100%)
+    elif lap_progress < 0.70:
+        # BACK STRAIGHT: Top section (Piastri/Norris area on map)
+        # Second DRS zone, good acceleration: 300 → 320 km/h
+        progress = (lap_progress - 0.58) / 0.12
+        base_speed = 300 + (progress * 20)
+
+    elif lap_progress < 0.83:
+        # TURNS 11-13: Left-side descent (Perez area on map)
+        # Downhill technical section: 275 → 285 km/h
+        progress = (lap_progress - 0.70) / 0.13
+        base_speed = 275 + (progress * 10)
+
+    elif lap_progress < 0.92:
+        # TURNS 14-15: Final corner complex
+        # Slow-speed corners before final straight: 270 → 280 km/h
+        progress = (lap_progress - 0.83) / 0.09
+        base_speed = 270 + (progress * 10)
+
+    else:
+        # FINAL ACCELERATION: Onto main straight (92-100%)
+        # Power on for next lap: 280 → 330 km/h
+        progress = (lap_progress - 0.92) / 0.08
+        base_speed = 280 + (progress * 50)
+
+    # Apply per-car strategy modifiers
+    # Straights benefit from energy deployment, corners from tire management
+    is_straight = (lap_progress < 0.12 or              # Main straight
+                   (0.18 < lap_progress < 0.25) or      # Straight after Turn 1
+                   (0.58 < lap_progress < 0.70) or      # Back straight (top)
+                   lap_progress > 0.92)                 # Acceleration zone
+
+    if is_straight:
+        # STRAIGHTS: Energy deployment matters (electric power boost)
+        # High energy = faster acceleration and top speed
+        straight_bonus = (energy_deployment - 60) / 100 * 15  # ±15 km/h
+        base_speed += straight_bonus
+    else:
+        # CORNERS: Tire management matters (mechanical grip)
+        # High tire mgmt = better cornering speed
+        corner_bonus = (tire_management - 70) / 100 * 10  # ±10 km/h
+        base_speed += corner_bonus
+
+    # Battery penalty (low battery → power limited on acceleration)
+    if battery_soc < 20:
+        battery_penalty = (20 - battery_soc) * 1.0  # 1 km/h per % below 20
+        base_speed -= battery_penalty
+
+    # Clamp to realistic F1 speeds (100-340 km/h range)
+    # Allows for realistic heavy braking at Turn 1
+    return max(100.0, min(340.0, base_speed))
+
+
+def get_opponent_strategy_params(agent_type: str) -> tuple:
+    """
+    Get energy_deployment and tire_management for AI opponents.
+
+    Returns:
+        (energy_deployment, tire_management) tuple
+    """
+    strategies = {
+        'VerstappenStyle': (70, 80),     # Balanced aggression
+        'HamiltonStyle': (60, 90),       # Tire conservation
+        'AlonsoStyle': (55, 85),         # Strategic defense
+        'AggressiveAttacker': (85, 60),  # All-out attack
+        'TireWhisperer': (50, 95),       # Maximum tire care
+        'EnergyMaximizer': (90, 70),     # Energy aggressive
+        'BalancedRacer': (60, 75)        # Standard approach
+    }
+    return strategies.get(agent_type, (60, 70))  # Default fallback
+
+
 @app.websocket("/ws/game/{session_id}")
 async def game_websocket(websocket: WebSocket, session_id: str):
     """
@@ -318,16 +457,29 @@ async def game_websocket(websocket: WebSocket, session_id: str):
     - DECISION_POINT: Pause for player decision with recommendations
     - RACE_COMPLETE: Race finished
     """
+    import traceback
+
+    print(f"✓ WebSocket connection attempt: {session_id}")
     await websocket.accept()
+    print(f"✓ WebSocket accepted: {session_id}")
 
     game_state: GameState = None
     orchestrator: GameLoopOrchestrator = None
 
     try:
         while True:
+            print(f"[{session_id}] Waiting for message...")
             # Receive message from client
-            data = await websocket.receive_json()
+            try:
+                data = await websocket.receive_json()
+                print(f"[{session_id}] ✓ Got message: {data}")
+            except Exception as e:
+                print(f"[{session_id}] ❌ Failed to receive JSON: {e}")
+                traceback.print_exc()
+                break
+
             message_type = data.get('type')
+            print(f"[{session_id}] Message type: {message_type}")
 
             # ==========================================
             # START GAME
@@ -349,6 +501,11 @@ async def game_websocket(websocket: WebSocket, session_id: str):
 
                 # Get game state
                 game_state = session_manager.get_session(new_session_id)
+
+                # Initialize pause_event for race control
+                game_state.pause_event = asyncio.Event()
+                game_state.pause_event.set()  # Initially not paused
+
                 orchestrator = GameLoopOrchestrator(game_state)
 
                 # Send RACE_STARTED message
@@ -380,8 +537,7 @@ async def game_websocket(websocket: WebSocket, session_id: str):
                 success = orchestrator.apply_strategy_choice(strategy_id)
 
                 if success:
-                    # Resume race
-                    game_state.is_paused = False
+                    # Clear decision point
                     game_state.current_decision_point = None
 
                     # Send confirmation
@@ -390,8 +546,9 @@ async def game_websocket(websocket: WebSocket, session_id: str):
                         'strategy_id': strategy_id
                     })
 
-                    # Continue race
-                    await run_race_loop(websocket, orchestrator, game_state)
+                    # Resume race loop by setting the pause_event
+                    # This will unblock the await pause_event.wait() in run_race_loop
+                    game_state.pause_event.set()
                 else:
                     await websocket.send_json({
                         'type': 'ERROR',
@@ -400,59 +557,182 @@ async def game_websocket(websocket: WebSocket, session_id: str):
 
     except WebSocketDisconnect:
         # Cleanup session on disconnect
+        print(f"✓ Client disconnected: {session_id}")
         if game_state:
             session_manager.delete_session(game_state.session_id)
     except Exception as e:
-        await websocket.send_json({
-            'type': 'ERROR',
-            'message': 'Game error',
-            'details': str(e)
-        })
+        print(f"❌ WebSocket error: {e}")
+        traceback.print_exc()
+        try:
+            await websocket.send_json({
+                'type': 'ERROR',
+                'message': 'Game error',
+                'details': str(e)
+            })
+        except:
+            pass
 
 
 async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator, game_state: GameState):
     """
-    Run the race lap-by-lap, pausing for decision points.
+    Run the race lap-by-lap with fixed timing, pausing for decision points.
+
+    Uses a lap timer to gate advance_lap() calls to maintain correct timing
+    (e.g., 18s per lap with LAP_TIME_MULTIPLIER=5.0), while sending updates
+    at 10 Hz for smooth visualization.
+
+    CRITICAL FIX: Advances cumulative_time incrementally every 100ms for smooth
+    car movement, while keeping lap-based physics every 18s for accuracy.
     """
-    while not game_state.is_complete and not game_state.is_paused:
-        # Advance one lap
-        lap_result = orchestrator.advance_lap()
+    # Calculate expected lap time in demo units (e.g., 90s / 5.0 = 18s)
+    LAP_TIME_DEMO = 90.0 / orchestrator.lap_time_multiplier
 
-        # Update session
+    # Timing accumulators
+    lap_accum = 0.0       # Accumulates time for next lap advancement
+    update_accum = 0.0    # Accumulates time for next state broadcast
+    last = time.perf_counter()  # Monotonic clock (immune to system clock changes)
+    UPDATE_INTERVAL = 0.1  # 10 Hz update rate
+
+    # CRITICAL FIX: Track baseline cumulative times for smooth interpolation
+    # These store the authoritative cumulative_time from the last advance_lap() call
+    cumulative_baselines = {}
+    all_racers = [game_state.player] + game_state.opponents
+    for racer in all_racers:
+        racer_id = id(racer)  # Use object ID as unique key
+        cumulative_baselines[racer_id] = racer.cumulative_time
+
+    # Ensure race starts in running state
+    game_state.pause_event.set()
+
+    # CRITICAL FIX: Advance to lap 1 immediately to kickstart the race
+    # Without this, race stays at lap 0 forever waiting for first lap_accum >= 18s
+    if game_state.current_lap == 0:
+        orchestrator.advance_lap()
         session_manager.update_session(game_state.session_id, game_state)
+        # Update baselines after first lap advancement
+        for racer in all_racers:
+            cumulative_baselines[id(racer)] = racer.cumulative_time
 
-        # Send lap update to client
-        await websocket.send_json({
-            'type': 'LAP_UPDATE',
-            'lap': lap_result['lap'],
-            'player': lap_result.get('player'),
-            'opponents': lap_result.get('opponents', []),
-            'is_raining': lap_result.get('is_raining', False),
-            'safety_car_active': lap_result.get('safety_car_active', False)
-        })
+    while not game_state.is_complete and not game_state.is_paused:
+        # Measure real elapsed time using monotonic clock
+        now = time.perf_counter()
+        dt = now - last
+        last = now
 
-        # Check if race is complete
-        if lap_result.get('race_complete'):
+        # Pause handling: freeze simulation time when paused
+        if not game_state.pause_event.is_set():
+            await asyncio.sleep(0.02)  # Small sleep while paused
+            continue
+
+        # Accumulate time
+        lap_accum += dt
+        update_accum += dt
+
+        # ==========================================
+        # SMOOTH VISUALIZATION: Update lap_progress AND speed
+        # Each racer advances from their baseline + elapsed lap time
+        # ==========================================
+        all_racers = [game_state.player] + game_state.opponents
+        for racer in all_racers:
+            racer_id = id(racer)
+            baseline = cumulative_baselines.get(racer_id, racer.cumulative_time)
+
+            # Per-car speed multiplier (faster cars move faster in visualization)
+            # Use last lap time to estimate current pace
+            if hasattr(racer, 'lap_time') and racer.lap_time > 0:
+                expected_lap_time = racer.lap_time
+            elif hasattr(racer, 'last_lap_time') and racer.last_lap_time > 0:
+                expected_lap_time = racer.last_lap_time
+            else:
+                expected_lap_time = LAP_TIME_DEMO
+
+            # Speed factor: how fast this car is relative to demo lap time
+            # Faster cars (lower lap_time) get speed_factor > 1.0
+            speed_factor = LAP_TIME_DEMO / max(0.1, expected_lap_time)
+
+            # Estimate current cumulative time (baseline + scaled elapsed time)
+            estimated_cumulative = baseline + (lap_accum * speed_factor)
+
+            # Calculate lap_progress from estimated cumulative time
+            # This gives smooth per-car movement based on individual pace
+            car_fractional_laps = estimated_cumulative / LAP_TIME_DEMO
+            racer.lap_progress = min(0.999, float(car_fractional_laps - int(car_fractional_laps)))
+
+            # ==========================================
+            # DYNAMIC SPEED CALCULATION (every 100ms)
+            # Uses lap_progress + strategy to show realistic F1 speed variation
+            # ==========================================
+            if hasattr(racer, 'energy_deployment'):
+                # Player: use actual strategy params
+                racer.speed = calculate_realistic_speed(
+                    lap_progress=racer.lap_progress,
+                    energy_deployment=racer.energy_deployment,
+                    tire_management=racer.tire_management,
+                    battery_soc=racer.battery_soc
+                )
+            else:
+                # Opponent: use agent-specific strategy defaults
+                energy, tire_mgmt = get_opponent_strategy_params(racer.agent_type)
+                racer.speed = calculate_realistic_speed(
+                    lap_progress=racer.lap_progress,
+                    energy_deployment=energy,
+                    tire_management=tire_mgmt,
+                    battery_soc=racer.battery_soc
+                )
+
+        # Only advance lap when enough time has passed (~18s)
+        if lap_accum >= LAP_TIME_DEMO:
+            lap_result = orchestrator.advance_lap()
+            lap_accum = 0.0  # Reset lap timer
+
+            # Update cumulative time baselines with NEW authoritative values
+            for racer in all_racers:
+                cumulative_baselines[id(racer)] = racer.cumulative_time
+
+            # Update session
+            session_manager.update_session(game_state.session_id, game_state)
+
+            # Check if race is complete
+            if lap_result.get('race_complete'):
+                await websocket.send_json({
+                    'type': 'RACE_COMPLETE',
+                    'final_position': lap_result['final_position'],
+                    'player': asdict(game_state.player),
+                    'opponents': [asdict(opp) for opp in game_state.opponents],
+                    'decision_count': len(game_state.decision_history),
+                    'race_summary': {
+                        'total_laps': game_state.total_laps,
+                        'decisions_made': len(game_state.decision_history)
+                    }
+                })
+                break
+
+        # Send state updates at 10 Hz (independent of lap advancement)
+        if update_accum >= UPDATE_INTERVAL:
+            update_accum = 0.0
+
+            # Send lap update to client (includes speed, gap_to_leader, lap_progress from game_loop)
             await websocket.send_json({
-                'type': 'RACE_COMPLETE',
-                'final_position': lap_result['final_position'],
+                'type': 'LAP_UPDATE',
+                'lap': game_state.current_lap,
                 'player': asdict(game_state.player),
                 'opponents': [asdict(opp) for opp in game_state.opponents],
-                'decision_count': len(game_state.decision_history),
-                'race_summary': {
-                    'total_laps': game_state.total_laps,
-                    'decisions_made': len(game_state.decision_history)
-                }
+                'is_raining': game_state.is_raining,
+                'safety_car_active': game_state.safety_car_active,
+                'server_timestamp': now  # For frontend interpolation sync
             })
-            break
+
+            # Debug logging (once per second)
+            if int(now) != int(last + dt):  # New second boundary
+                print(f"[RACE] Lap {game_state.current_lap}/{game_state.total_laps}, "
+                      f"lap_accum={lap_accum:.2f}s, "
+                      f"player cumulative={game_state.player.cumulative_time:.2f}s, "
+                      f"pos=P{game_state.player.position}")
 
         # Check for decision points
         decision_check = orchestrator.check_for_decision_point()
 
         if decision_check.get('triggered'):
-            # Pause game
-            game_state.is_paused = True
-
             # Get recommendations from GameAdvisor
             event_type = decision_check['event_type']
             current_state = decision_check['state']
@@ -484,12 +764,17 @@ async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator
                 'recommendations': recommendations
             }
 
-            # Wait for player to select strategy
-            # (race loop pauses here, client sends SELECT_STRATEGY)
-            break
+            # Pause race loop and wait for player to select strategy
+            game_state.pause_event.clear()
 
-        # Pacing: Wait 500ms between laps for visualization
-        await asyncio.sleep(0.5)
+            # Wait for SELECT_STRATEGY to set the event (non-blocking)
+            await game_state.pause_event.wait()
+
+            # Reset monotonic clock baseline after pause to prevent dt spike
+            last = time.perf_counter()
+
+        # Cooperative yield to event loop
+        await asyncio.sleep(0.002)
 
 
 if __name__ == "__main__":

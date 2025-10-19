@@ -32,6 +32,15 @@ class GameLoopOrchestrator:
         self.advisor = GameAdvisor()
         self.handled_events = set()  # Track which events we've already shown
 
+        # Timing configuration: adjust LAP_TIME_MULTIPLIER for demo speed
+        # 1.0 = realistic 90s laps (57 laps = 85 min race)
+        # 5.0 = demo-friendly 18s laps (57 laps = 17 min race)
+        # 10.0 = fast 9s laps (57 laps = 8.5 min race)
+        # 50.0 = ultra-fast 1.8s laps (57 laps = 2.7 min race)
+        import os
+        self.lap_time_multiplier = float(os.getenv("LAP_TIME_MULTIPLIER", "5.0"))
+        self.base_lap_time = 90.0
+
     def advance_lap(self) -> Dict:
         """
         Simulate one lap for all racers.
@@ -67,9 +76,8 @@ class GameLoopOrchestrator:
         # Update positions
         self._update_race_positions(player_result, opponent_results)
 
-        # Update opponent lap progress for visualization
-        for opponent in self.game_state.opponents:
-            opponent.lap_progress = lap / self.game_state.total_laps
+        # Calculate speed, gap, and lap progress for visualization
+        self._update_visualization_metrics(lap)
 
         return {
             'lap': lap,
@@ -116,6 +124,9 @@ class GameLoopOrchestrator:
 
         # Add some randomness
         lap_time += np.random.uniform(-0.5, 0.5)
+
+        # Apply LAP_TIME_MULTIPLIER for demo speed (e.g., 90s / 5.0 = 18s)
+        lap_time = lap_time / self.lap_time_multiplier
 
         player.lap_time = lap_time
         player.cumulative_time += lap_time
@@ -180,7 +191,11 @@ class GameLoopOrchestrator:
             # Add randomness (AI varies more than player for realism)
             lap_time += np.random.uniform(-1.0, 1.0)
 
+            # Apply LAP_TIME_MULTIPLIER for demo speed (e.g., 90s / 5.0 = 18s)
+            lap_time = lap_time / self.lap_time_multiplier
+
             opponent.cumulative_time += lap_time
+            opponent.last_lap_time = lap_time  # Track for speed calculation
 
             results.append({
                 'agent': opponent.name,
@@ -215,6 +230,63 @@ class GameLoopOrchestrator:
             else:
                 opponent.position = position
 
+    def _update_visualization_metrics(self, current_lap: int):
+        """
+        Calculate speed, gap_to_leader, and lap_progress for smooth visualization.
+
+        Speed: Derived from lap_time (faster lap = higher speed)
+        Gap to leader: Time difference from leader's cumulative time
+        Lap progress: Position within current lap (0-1 cycling per lap for smooth track animation)
+
+        CRITICAL FIX: Use modulo-based calculation to avoid reliance on global current_lap,
+        which caused cars to get stuck when cumulative_time didn't align with expected schedule.
+        """
+        # Find the race leader (lowest cumulative time)
+        all_racers = [self.game_state.player] + self.game_state.opponents
+        leader_time = min(racer.cumulative_time for racer in all_racers)
+
+        # Expected lap time in demo units (e.g., 90s / 5.0 = 18s)
+        expected_lap_time = self.base_lap_time / self.lap_time_multiplier
+
+        # Update player metrics
+        player = self.game_state.player
+        player.speed = self._calculate_speed(player.lap_time)
+        player.gap_to_leader = player.cumulative_time - leader_time
+
+        # FIX: Modulo-based lap_progress (independent of global current_lap)
+        # This gives fractional laps (e.g., 5.7 laps), take remainder for 0-1 progress
+        car_fractional_laps = player.cumulative_time / expected_lap_time
+        player.lap_progress = float(car_fractional_laps - int(car_fractional_laps))  # Equivalent to % 1.0
+
+        # Update opponent metrics
+        for opponent in self.game_state.opponents:
+            opponent.speed = self._calculate_speed(opponent.last_lap_time)
+            opponent.gap_to_leader = opponent.cumulative_time - leader_time
+
+            # FIX: Same modulo-based calculation per car
+            opp_fractional_laps = opponent.cumulative_time / expected_lap_time
+            opponent.lap_progress = float(opp_fractional_laps - int(opp_fractional_laps))
+
+    def _calculate_speed(self, lap_time: float) -> float:
+        """
+        Convert lap_time to approximate speed in km/h for visualization.
+
+        Faster laps = higher speed.
+        Accounts for LAP_TIME_MULTIPLIER to show accurate speeds in demo mode.
+        """
+        # Expected lap time in demo units (e.g., 90s / 5.0 = 18s)
+        expected_demo_time = self.base_lap_time / self.lap_time_multiplier
+
+        base_speed = 300.0  # km/h at expected demo lap time
+
+        # Speed delta: each second faster/slower = ~50 km/h change (increased sensitivity)
+        # This gives visible speed differences in demo mode
+        speed_delta = (expected_demo_time - lap_time) * 50.0
+        speed = base_speed + speed_delta
+
+        # Clamp to realistic F1 speeds (250-330 km/h for tighter visual range)
+        return max(250.0, min(330.0, speed))
+
     def check_for_decision_point(self) -> Optional[Dict]:
         """
         Check if game should pause for player decision.
@@ -236,32 +308,28 @@ class GameLoopOrchestrator:
             safety_car=self.game_state.safety_car_active
         )
 
-        # Check for decision triggers
+        # Check for decision triggers (HIGH-IMPACT EVENTS ONLY)
         event_type = check_decision_point(current_state, self.handled_events)
 
         if event_type:
-            # Mark as handled
-            self.handled_events.add(event_type)
-
-            return {
-                'triggered': True,
-                'event_type': event_type,
-                'state': current_state
+            # Only trigger on specific high-impact events
+            high_impact_events = {
+                'RAIN_START', 'RAIN_STOP', 'SAFETY_CAR',
+                'BATTERY_LOW', 'BATTERY_CRITICAL',
+                'TIRE_CRITICAL'
             }
 
-        # Also trigger decision every 12 laps (strategic checkpoints)
-        if (self.game_state.current_lap % 12 == 0 and
-            self.game_state.current_lap > 0 and
-            f'LAP_{self.game_state.current_lap}' not in self.handled_events):
+            if event_type in high_impact_events:
+                # Mark as handled
+                self.handled_events.add(event_type)
 
-            self.handled_events.add(f'LAP_{self.game_state.current_lap}')
+                return {
+                    'triggered': True,
+                    'event_type': event_type,
+                    'state': current_state
+                }
 
-            return {
-                'triggered': True,
-                'event_type': 'STRATEGIC_CHECKPOINT',
-                'state': current_state
-            }
-
+        # No routine strategic checkpoints - car runs on configured parameters
         return {
             'triggered': False
         }
