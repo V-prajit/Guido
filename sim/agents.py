@@ -233,6 +233,7 @@ class AdaptiveAI(Agent):
         """
         super().__init__(name, params)
         self.playbook = playbook or {'rules': []}
+        self.rule_usage = {}
 
     def matches_condition(self, condition: str, state: RaceState) -> bool:
         """
@@ -289,12 +290,16 @@ class AdaptiveAI(Agent):
             Decision dict with deploy_straight, deploy_corner, harvest, use_boost
         """
         # Check each rule in order
-        for rule in self.playbook.get('rules', []):
+        for idx, rule in enumerate(self.playbook.get('rules', [])):
             condition = rule.get('condition', '')
             action = rule.get('action', {})
 
             # If condition matches, return this rule's action
             if condition and action and self.matches_condition(condition, state):
+                # Track rule usage
+                rule_name = rule.get('rule', f'Rule {idx}')
+                self.rule_usage[rule_name] = self.rule_usage.get(rule_name, 0) + 1
+
                 # Ensure all required fields exist in action
                 return {
                     'deploy_straight': action.get('deploy_straight', 78),
@@ -304,6 +309,9 @@ class AdaptiveAI(Agent):
                 }
 
         # No rules matched - use proven baseline strategy
+        fallback_name = 'Fallback Baseline'
+        self.rule_usage[fallback_name] = self.rule_usage.get(fallback_name, 0) + 1
+
         return {
             'deploy_straight': 78,
             'deploy_corner': 68,

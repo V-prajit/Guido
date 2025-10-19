@@ -1,12 +1,12 @@
 {
-  "num_scenarios": 20,
-  "adaptive_wins": 6,
-  "adaptive_win_rate": 30.0,
-  "median_baseline_wins": 0,
-  "median_baseline_rate": 0.0,
-  "max_baseline_wins": 8,
-  "passed": true,
-  "playbook_loaded": true,
+  "simulations": 1000,
+  "rules_count": 5,
+  "model": "unknown",
+  "fallback": false,
+  "validation_win_rate": 30.0,
+  "validation_passed": true,
+  "avg_confidence": 0.87,
+  "avg_uplift": 17.4,
   "rule_usage": {
     "total_decisions": 1202,
     "rules": {
