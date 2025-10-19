@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { useGame } from "@/contexts/GameContext";
+import { motion } from "framer-motion";
 
 interface BoxProps {
   className?: string;
@@ -25,43 +26,53 @@ export default function Box8({ className, style, children }: BoxProps) {
   const composedClassName = className ? `${baseClasses} ${className}` : baseClasses;
   const mergedStyle = style ? { ...defaultLayout, ...style } : defaultLayout;
 
-  const { positionHistory, gameStarted } = useGame();
-
-  // Sample last 12 laps for display
-  const displayHistory = positionHistory.slice(-12);
-
-  // Calculate bar height (inverted - position 1 should be tallest)
-  const getBarHeight = (position: number) => {
-    const maxPosition = 8; // Assuming 8 cars
-    const heightPercent = ((maxPosition - position + 1) / maxPosition) * 100;
-    return `${Math.max(20, Math.min(100, heightPercent))}%`;
-  };
+  const { getCarsForTrack, gameStarted } = useGame();
+  const cars = gameStarted ? getCarsForTrack() : [];
+  const sortedCars = [...cars].sort((a, b) => a.position - b.position);
 
   return (
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
-      <div className="relative z-[1] flex flex-1 flex-col p-6">
-        <h3 className="text-sm font-bold text-text-primary mb-4 tracking-wide">POSITION GRAPH</h3>
-        <div className="h-full flex items-end justify-between gap-1 border-b border-l border-border/20 pb-4 pl-4">
-          {!gameStarted || displayHistory.length === 0 ? (
-            <div className="text-xs text-text-secondary">Start race to see position history</div>
+      <div className="relative z-[1] flex flex-1 flex-col p-4">
+        <h3 className="absolute top-3 text-sm font-bold text-gray-400 tracking-widest uppercase">
+          Live Standings
+        </h3>
+        <div className="mt-10 flex flex-col space-y-1 overflow-y-auto pr-2">
+          {!gameStarted || sortedCars.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-xs text-text-secondary">
+              Start race to see live standings
+            </div>
           ) : (
-            displayHistory.map((entry, index) => (
-              <div key={`${entry.lap}-${index}`} className="flex-1 flex flex-col items-center gap-1">
-                <div className="w-full bg-text-primary/20 rounded-t relative" style={{ height: '100px' }}>
-                  <div
-                    className="w-full bg-text-primary rounded-t absolute bottom-0"
-                    style={{ height: getBarHeight(entry.position) }}
-                  ></div>
+            sortedCars.map((car, index) => (
+              <motion.div
+                key={car.id}
+                className={`flex items-center space-x-3 p-1.5 rounded-md transition-colors ${
+                  car.isUserCar ? 'bg-blue-500/20' : ''
+                }`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+              >
+                <span
+                  className={`text-sm font-bold w-5 text-center ${
+                    car.isUserCar ? 'text-blue-300' : 'text-gray-500'
+                  }`}
+                >
+                  {car.position}
+                </span>
+                <div className="flex-1">
+                  <p
+                    className={`text-sm font-semibold truncate ${
+                      car.isUserCar ? 'text-blue-100' : 'text-gray-300'
+                    }`}
+                  >
+                    {car.driverName}
+                  </p>
                 </div>
-                <span className="text-[8px] text-text-secondary/40">{entry.lap}</span>
-              </div>
+                <span className="text-xs font-mono text-gray-500 pr-1">{car.lapTime}</span>
+              </motion.div>
             ))
           )}
-        </div>
-        <div className="mt-2 flex justify-between text-xs text-text-secondary">
-          <span>Lap</span>
-          <span>Position</span>
         </div>
       </div>
     </section>
