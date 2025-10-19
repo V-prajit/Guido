@@ -270,6 +270,43 @@ export const GameProvider: React.FC<GameProviderProps> = ({
     return cars.sort((a, b) => a.position - b.position);
   }, [player, opponents, currentLap, totalLaps]);
 
+  // =================================================================================
+  // MOCK DATA GENERATION (FOR DEMO PURPOSES)
+  // =================================================================================
+  useEffect(() => {
+    if (!gameStarted || raceComplete) return;
+
+    const eventTypes = [
+      'RAIN_START',
+      'BATTERY_LOW',
+      'TIRE_DEGRADED',
+      'SAFETY_CAR',
+      'OVERTAKE_OPPORTUNITY',
+    ];
+    const outcomes: (string | undefined)[] = ['success', 'failure', undefined];
+
+    const interval = setInterval(() => {
+      setDecisionHistory(prev => {
+        // Don't add if a decision for the current lap already exists
+        if (prev.some(d => d.lap === currentLap) || currentLap === 0) return prev;
+
+        const randomEvent = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+        const randomOutcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+
+        const newDecision: DecisionHistoryEntry = {
+          lap: currentLap,
+          event_type: randomEvent,
+          strategy_chosen: Math.floor(Math.random() * 3) + 1,
+          timestamp: Date.now(),
+          outcome: randomOutcome,
+        };
+        return [...prev, newDecision];
+      });
+    }, 9000);
+
+    return () => clearInterval(interval);
+  }, [gameStarted, raceComplete, currentLap]);
+
   const value = useMemo(
     () => ({
       isConnected,
