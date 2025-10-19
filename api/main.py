@@ -306,6 +306,68 @@ from sim.game_loop import GameLoopOrchestrator
 from dataclasses import asdict
 
 
+def generate_heuristic_recommendations(current_state, event_type: str) -> dict:
+    """
+    Generate instant heuristic recommendations without running simulations.
+    Used as fallback when pre-computation isn't ready (NEVER block the game!)
+    """
+    # Rain: Aggressive = risky, Balanced = safe, Conservative = very safe
+    strategies = [
+        {
+            'strategy_id': 0,
+            'strategy_name': 'Aggressive',
+            'win_rate': 25.0,
+            'rationale': 'High risk in rain. Push hard with electric power but tires will wear fast.',
+            'confidence': 0.6,
+            'strategy_params': {
+                'energy_deployment': 85,
+                'tire_management': 50,
+                'fuel_strategy': 55,
+                'ers_mode': 80,
+                'overtake_aggression': 85,
+                'defense_intensity': 60
+            }
+        },
+        {
+            'strategy_id': 1,
+            'strategy_name': 'Balanced',
+            'win_rate': 45.0,
+            'rationale': 'Moderate pace with careful tire management. Best overall approach in rain.',
+            'confidence': 0.8,
+            'strategy_params': {
+                'energy_deployment': 60,
+                'tire_management': 75,
+                'fuel_strategy': 70,
+                'ers_mode': 65,
+                'overtake_aggression': 55,
+                'defense_intensity': 65
+            }
+        },
+        {
+            'strategy_id': 2,
+            'strategy_name': 'Conservative',
+            'win_rate': 15.0,
+            'rationale': 'Very safe but slow. Risk dropping positions to faster cars.',
+            'confidence': 0.7,
+            'strategy_params': {
+                'energy_deployment': 35,
+                'tire_management': 90,
+                'fuel_strategy': 85,
+                'ers_mode': 50,
+                'overtake_aggression': 30,
+                'defense_intensity': 70
+            }
+        }
+    ]
+
+    return {
+        'recommended': [strategies[1], strategies[0]],  # Balanced, then Aggressive
+        'avoid': strategies[2],  # Conservative
+        'latency_ms': 0,
+        'used_fallback': True
+    }
+
+
 def calculate_realistic_speed(
     lap_progress: float,
     energy_deployment: float,
@@ -695,6 +757,14 @@ async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator
             # Update session
             session_manager.update_session(game_state.session_id, game_state)
 
+            # DEMO OPTIMIZATION: Pre-compute rain decision on lap 2 for instant lap 3 display
+            if game_state.current_lap == 2 and not orchestrator.pre_compute_started:
+                print("[DEMO] Lap 2 complete - triggering pre-computation for rain decision")
+                orchestrator.pre_compute_started = True
+                # Run pre-computation in SEPARATE THREAD (truly non-blocking)
+                loop = asyncio.get_event_loop()
+                loop.run_in_executor(THREAD_EXECUTOR, orchestrator.pre_compute_rain_decision)
+
             # Check if race is complete
             if lap_result.get('race_complete'):
                 await websocket.send_json({
@@ -740,11 +810,18 @@ async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator
             event_type = decision_check['event_type']
             current_state = decision_check['state']
 
-            # Run quick sims + Gemini analysis
-            recommendations = await orchestrator.get_decision_recommendations(
-                event_type=event_type,
-                current_state=current_state
-            )
+            # DEMO OPTIMIZATION: Use pre-computed decision for rain on lap 3
+            if event_type == 'RAIN_START' and orchestrator.pre_computed_decision is not None:
+                print("[DEMO] ✓ Using pre-computed rain decision (instant response!)")
+                recommendations = orchestrator.pre_computed_decision
+                recommendations['latency_ms'] = recommendations.get('latency_ms', 0)
+                recommendations['pre_computed'] = True
+            else:
+                # CRITICAL FIX: Use instant heuristic fallback (NEVER block the game!)
+                print(f"[DEMO] Pre-computation not ready, using instant heuristic fallback for {event_type}")
+                recommendations = generate_heuristic_recommendations(current_state, event_type)
+                recommendations['pre_computed'] = False
+                print(f"[DEMO] ✓ Instant fallback recommendations generated (0ms latency)")
 
             # Send decision point to client
             await websocket.send_json({
@@ -769,9 +846,17 @@ async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator
 
             # Pause race loop and wait for player to select strategy
             game_state.pause_event.clear()
+            print(f"[RACE_LOOP] Paused race, waiting for player to select strategy...")
 
-            # Wait for SELECT_STRATEGY to set the event (non-blocking)
-            await game_state.pause_event.wait()
+            # Wait for SELECT_STRATEGY to set the event (with 5 min timeout)
+            try:
+                await asyncio.wait_for(game_state.pause_event.wait(), timeout=300.0)
+                print(f"[RACE_LOOP] ✓ Player selected strategy, resuming race...")
+            except asyncio.TimeoutError:
+                # Timeout - auto-select balanced strategy
+                print(f"[RACE_LOOP] ⚠️ Decision timeout (5min) - auto-selecting balanced strategy")
+                orchestrator.apply_strategy_choice(1)  # Auto-select balanced (strategy_id=1)
+                game_state.pause_event.set()
 
             # Reset monotonic clock baseline after pause to prevent dt spike
             last = time.perf_counter()

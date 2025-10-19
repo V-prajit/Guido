@@ -76,11 +76,11 @@ function GameContent() {
           batterySOC={player.battery_soc}
           tireLife={player.tire_life}
           fuelRemaining={player.fuel_remaining}
-          recommended={decisionPoint.recommendations.recommended || []}
-          avoid={decisionPoint.recommendations.avoid || null}
+          recommended={decisionPoint.recommended || []}
+          avoid={decisionPoint.avoid || null}
           onSelect={selectStrategy}
-          latencyMs={decisionPoint.recommendations.latency_ms}
-          usedFallback={decisionPoint.recommendations.used_fallback}
+          latencyMs={decisionPoint.latency_ms}
+          usedFallback={decisionPoint.used_fallback}
         />
       )}
     </>
