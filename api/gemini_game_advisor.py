@@ -47,14 +47,14 @@ class GameAdvisor:
                 # Try to create model with system_instruction (v0.5.0+)
                 try:
                     self.model = genai.GenerativeModel(
-                        'gemini-2.0-flash-exp',
+                        'gemini-2.5-flash',  # 6-7x faster than 2.0!
                         system_instruction=self._load_system_prompt()
                     )
                 except TypeError:
                     # Fallback for older versions without system_instruction support
                     print("⚠️ Old google-generativeai version detected, using model without system_instruction")
                     print("   (Upgrade with: pip install --upgrade google-generativeai)")
-                    self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+                    self.model = genai.GenerativeModel('gemini-2.5-flash')
 
                 self.gemini_available = True
                 print("✅ GameAdvisor initialized with Gemini")
@@ -69,7 +69,7 @@ class GameAdvisor:
         sim_results: pd.DataFrame,
         race_context: dict,
         strategy_params: List[dict],
-        timeout_seconds: float = 2.5
+        timeout_seconds: float = 10.0
     ) -> dict:
         """
         Main entry point for game loop decision analysis.
@@ -104,7 +104,7 @@ class GameAdvisor:
                     {...}   # Strategy C
                 ]
 
-            timeout_seconds: Max time for Gemini analysis (fallback after)
+            timeout_seconds: Max time for Gemini analysis (default 10s, fallback after)
 
         Returns:
             {
