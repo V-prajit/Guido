@@ -303,6 +303,145 @@ from sim.game_loop import GameLoopOrchestrator
 from dataclasses import asdict
 
 
+def calculate_realistic_speed(
+    lap_progress: float,
+    energy_deployment: float,
+    tire_management: float,
+    battery_soc: float
+) -> float:
+    """
+    Calculate realistic F1 speed based on ACCURATE Bahrain International Circuit layout.
+
+    Bahrain GP Track (5.412 km, 15 turns, clockwise):
+    - Main straight (bottom): 0-12% - DRS zone, top speed
+    - Turn 1 braking: 12-18% - Heavy braking into first corner
+    - Turns 2-4: 18-28% - Right-side technical complex
+    - Turns 5-8: 28-40% - Top section, medium-speed
+    - Turns 9-10: 40-55% - Middle flowing section
+    - Back straight: 55-68% - Top area, second DRS candidate
+    - Turns 11-13: 68-82% - Left descent
+    - Turns 14-15: 82-92% - Final corner complex
+    - Acceleration: 92-100% - Power onto main straight
+
+    Args:
+        lap_progress: Position in lap (0-1)
+        energy_deployment: Strategy param (0-100)
+        tire_management: Strategy param (0-100)
+        battery_soc: Battery level (0-100)
+
+    Returns:
+        Speed in km/h (100-340 range for realistic braking)
+    """
+    # SECTOR 1: Start/Finish Straight + Turn 1-4 Complex (0-33%)
+    if lap_progress < 0.12:
+        # MAIN STRAIGHT (bottom of track map) - Where "You" P1 starts
+        # DRS active, maximum acceleration: 280 → 330 km/h
+        progress = lap_progress / 0.12
+        base_speed = 280 + (progress * 50)
+
+    elif lap_progress < 0.18:
+        # TURN 1: HEAVY BRAKING ZONE (end of main straight)
+        # Dramatic slowdown for tight first corner: 330 → 100 km/h
+        progress = (lap_progress - 0.12) / 0.06
+        base_speed = 330 - (progress * 230)
+
+    elif lap_progress < 0.25:
+        # STRAIGHT AFTER TURN 1: Diagonal straight up-right (toward Piastri/Norris)
+        # FAST acceleration out of Turn 1 exit: 100 → 280 km/h
+        progress = (lap_progress - 0.18) / 0.07
+        base_speed = 100 + (progress * 180)
+
+    elif lap_progress < 0.35:
+        # TECHNICAL SECTION: Hamilton/Alonso area corners (middle-right of map)
+        # Medium-speed technical: 260 → 280 km/h
+        progress = (lap_progress - 0.25) / 0.10
+        base_speed = 260 + (progress * 20)
+
+    # SECTOR 2: Middle to Top Section (35-66%)
+    elif lap_progress < 0.43:
+        # TURNS 5-8: Top-right back section
+        # Medium-speed acceleration: 280 → 305 km/h
+        progress = (lap_progress - 0.35) / 0.08
+        base_speed = 280 + (progress * 25)
+
+    elif lap_progress < 0.58:
+        # TURNS 9-10: Middle technical flowing section
+        # Maintaining momentum: 290 → 300 km/h
+        progress = (lap_progress - 0.43) / 0.15
+        base_speed = 290 + (progress * 10)
+
+    # SECTOR 3: Final Section Back to Start/Finish (58-100%)
+    elif lap_progress < 0.70:
+        # BACK STRAIGHT: Top section (Piastri/Norris area on map)
+        # Second DRS zone, good acceleration: 300 → 320 km/h
+        progress = (lap_progress - 0.58) / 0.12
+        base_speed = 300 + (progress * 20)
+
+    elif lap_progress < 0.83:
+        # TURNS 11-13: Left-side descent (Perez area on map)
+        # Downhill technical section: 275 → 285 km/h
+        progress = (lap_progress - 0.70) / 0.13
+        base_speed = 275 + (progress * 10)
+
+    elif lap_progress < 0.92:
+        # TURNS 14-15: Final corner complex
+        # Slow-speed corners before final straight: 270 → 280 km/h
+        progress = (lap_progress - 0.83) / 0.09
+        base_speed = 270 + (progress * 10)
+
+    else:
+        # FINAL ACCELERATION: Onto main straight (92-100%)
+        # Power on for next lap: 280 → 330 km/h
+        progress = (lap_progress - 0.92) / 0.08
+        base_speed = 280 + (progress * 50)
+
+    # Apply per-car strategy modifiers
+    # Straights benefit from energy deployment, corners from tire management
+    is_straight = (lap_progress < 0.12 or              # Main straight
+                   (0.18 < lap_progress < 0.25) or      # Straight after Turn 1
+                   (0.58 < lap_progress < 0.70) or      # Back straight (top)
+                   lap_progress > 0.92)                 # Acceleration zone
+
+    if is_straight:
+        # STRAIGHTS: Energy deployment matters (electric power boost)
+        # High energy = faster acceleration and top speed
+        straight_bonus = (energy_deployment - 60) / 100 * 15  # ±15 km/h
+        base_speed += straight_bonus
+    else:
+        # CORNERS: Tire management matters (mechanical grip)
+        # High tire mgmt = better cornering speed
+        corner_bonus = (tire_management - 70) / 100 * 10  # ±10 km/h
+        base_speed += corner_bonus
+
+    # Battery penalty (low battery → power limited on acceleration)
+    if battery_soc < 20:
+        battery_penalty = (20 - battery_soc) * 1.0  # 1 km/h per % below 20
+        base_speed -= battery_penalty
+
+    # Clamp to realistic F1 speeds (100-340 km/h range)
+    # Allows for realistic heavy braking at Turn 1
+    return max(100.0, min(340.0, base_speed))
+
+
+def get_opponent_strategy_params(agent_type: str) -> tuple:
+    """
+    Get energy_deployment and tire_management for AI opponents.
+
+    Returns:
+        (energy_deployment, tire_management) tuple
+    """
+    strategies = {
+        'VerstappenStyle': (70, 80),     # Balanced aggression
+        'HamiltonStyle': (60, 90),       # Tire conservation
+        'AlonsoStyle': (55, 85),         # Strategic defense
+        'AggressiveAttacker': (85, 60),  # All-out attack
+        'TireWhisperer': (50, 95),       # Maximum tire care
+        'EnergyMaximizer': (90, 70),     # Energy aggressive
+        'BalancedRacer': (60, 75)        # Standard approach
+    }
+    return strategies.get(agent_type, (60, 70))  # Default fallback
+
+
 @app.websocket("/ws/game/{session_id}")
 async def game_websocket(websocket: WebSocket, session_id: str):
     """
@@ -490,7 +629,7 @@ async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator
         update_accum += dt
 
         # ==========================================
-        # SMOOTH VISUALIZATION: Update display_cumulative_time and lap_progress
+        # SMOOTH VISUALIZATION: Update lap_progress AND speed
         # Each racer advances from their baseline + elapsed lap time
         # ==========================================
         all_racers = [game_state.player] + game_state.opponents
@@ -518,6 +657,28 @@ async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator
             # This gives smooth per-car movement based on individual pace
             car_fractional_laps = estimated_cumulative / LAP_TIME_DEMO
             racer.lap_progress = min(0.999, float(car_fractional_laps - int(car_fractional_laps)))
+
+            # ==========================================
+            # DYNAMIC SPEED CALCULATION (every 100ms)
+            # Uses lap_progress + strategy to show realistic F1 speed variation
+            # ==========================================
+            if hasattr(racer, 'energy_deployment'):
+                # Player: use actual strategy params
+                racer.speed = calculate_realistic_speed(
+                    lap_progress=racer.lap_progress,
+                    energy_deployment=racer.energy_deployment,
+                    tire_management=racer.tire_management,
+                    battery_soc=racer.battery_soc
+                )
+            else:
+                # Opponent: use agent-specific strategy defaults
+                energy, tire_mgmt = get_opponent_strategy_params(racer.agent_type)
+                racer.speed = calculate_realistic_speed(
+                    lap_progress=racer.lap_progress,
+                    energy_deployment=energy,
+                    tire_management=tire_mgmt,
+                    battery_soc=racer.battery_soc
+                )
 
         # Only advance lap when enough time has passed (~18s)
         if lap_accum >= LAP_TIME_DEMO:
