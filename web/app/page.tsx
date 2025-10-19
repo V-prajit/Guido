@@ -1,8 +1,9 @@
 'use client';
 
-import { Box1, Box2, Box3, Box4, Box5, Box6, Box7, Box8 } from './components/Box';
+import { Box1, Box2, Box3, Box5, Box6, Box7, Box8 } from './components/Box';
 import { Logo } from './components/Logo';
 import { GameProvider, useGame } from '@/contexts/GameContext';
+import DecisionModal from '@/tempComponents/GameUI/DecisionModal';
 
 function GameControls() {
   const { isConnected, gameStarted, raceComplete, finalPosition, startRace, restartRace } = useGame();
@@ -43,6 +44,8 @@ function GameControls() {
 }
 
 function GameContent() {
+  const { decisionPoint, player, currentLap, selectStrategy } = useGame();
+
   return (
     <>
       <GameControls />
@@ -57,12 +60,29 @@ function GameContent() {
         <Box1 />
         <Box2 />
         <Box3 />
-        <Box4 />
         <Box5 />
         <Box6 />
         <Box7 />
         <Box8 />
       </div>
+
+      {/* Rain Decision Modal */}
+      {decisionPoint && player && (
+        <DecisionModal
+          isOpen={!!decisionPoint}
+          eventType={decisionPoint.event_type}
+          lap={currentLap}
+          position={player.position}
+          batterySOC={player.battery_soc}
+          tireLife={player.tire_life}
+          fuelRemaining={player.fuel_remaining}
+          recommended={decisionPoint.recommendations.recommended || []}
+          avoid={decisionPoint.recommendations.avoid || null}
+          onSelect={selectStrategy}
+          latencyMs={decisionPoint.recommendations.latency_ms}
+          usedFallback={decisionPoint.recommendations.used_fallback}
+        />
+      )}
     </>
   );
 }

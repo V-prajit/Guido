@@ -58,10 +58,10 @@ export default function Box6({ className, style, children }: BoxProps) {
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
       <div className="relative z-[1] flex flex-1 flex-col p-6">
-        <h3 className="text-sm font-bold text-text-primary mb-4 tracking-wide">AGENT PERFORMANCE</h3>
+        <h3 className="text-lg font-bold text-text-primary mb-4 tracking-wide">AGENT PERFORMANCE</h3>
         <div className="space-y-3">
           {!gameStarted || performanceMetrics.length === 0 ? (
-            <div className="text-xs text-text-secondary">Start race to see performance</div>
+            <div className="text-sm text-text-secondary">Start race to see performance</div>
           ) : (
             performanceMetrics.map((metric, index) => (
               <div
@@ -71,10 +71,10 @@ export default function Box6({ className, style, children }: BoxProps) {
                 } pb-2`}
               >
                 <div className="flex justify-between items-center mb-1">
-                  <span className={`text-sm ${metric.isPlayer ? 'font-bold' : ''} text-text-primary`}>
+                  <span className={`text-base ${metric.isPlayer ? 'font-bold' : ''} text-text-primary`}>
                     {metric.name}
                   </span>
-                  <span className="text-xs text-text-secondary">
+                  <span className="text-sm text-text-secondary">
                     {metric.optimal}% optimal
                   </span>
                 </div>

@@ -32,6 +32,10 @@ class GameLoopOrchestrator:
         self.advisor = GameAdvisor()
         self.handled_events = set()  # Track which events we've already shown
 
+        # Pre-computation for instant decision display
+        self.pre_computed_decision = None  # Cache for lap 3 rain decision
+        self.pre_compute_started = False   # Track if we've started pre-computing
+
         # Timing configuration: adjust LAP_TIME_MULTIPLIER for demo speed
         # 1.0 = realistic 90s laps (57 laps = 85 min race)
         # 5.0 = demo-friendly 18s laps (57 laps = 17 min race)
@@ -98,25 +102,42 @@ class GameLoopOrchestrator:
         fuel_strat = player.fuel_strategy
         ers = player.ers_mode
 
-        # Battery dynamics
-        battery_drain = (energy / 100) * 0.8
-        battery_gain = (ers / 100) * 0.6
+        # Battery dynamics (AMPLIFIED for demo visibility)
+        # High energy deployment = faster drain, more dramatic changes
+        battery_drain = (energy / 100) * 1.2  # Increased from 0.8 to 1.2
+        battery_gain = (ers / 100) * 0.8      # Increased from 0.6 to 0.8
         player.battery_soc = max(0, min(100, player.battery_soc - battery_drain + battery_gain))
 
-        # Tire degradation
-        tire_wear = (100 - tire_mgmt) / 100 * 1.5
+        # Tire degradation (AMPLIFIED - aggressive driving = faster wear)
+        # Low tire management (aggressive) = 2-3x faster wear for visible impact
+        base_tire_wear = (100 - tire_mgmt) / 100 * 1.5
+        if tire_mgmt < 50:  # Aggressive tire usage
+            tire_wear = base_tire_wear * 2.0  # Double wear when aggressive
+        else:
+            tire_wear = base_tire_wear
         player.tire_life = max(0, player.tire_life - tire_wear)
 
-        # Fuel consumption
-        fuel_burn = (100 - fuel_strat) / 100 * 0.5
+        # Fuel consumption (AMPLIFIED - aggressive = higher burn rate)
+        base_fuel_burn = (100 - fuel_strat) / 100 * 0.5
+        if fuel_strat < 50:  # Aggressive fuel usage
+            fuel_burn = base_fuel_burn * 1.5  # 50% more fuel burn
+        else:
+            fuel_burn = base_fuel_burn
         player.fuel_remaining = max(0, player.fuel_remaining - fuel_burn)
 
-        # Lap time calculation (base: 90s)
+        # Lap time calculation (base: 90s) - AMPLIFIED for dramatic speed differences
         lap_time = 90.0
-        lap_time -= (energy / 100) * 0.3  # Energy gives speed
-        lap_time += (100 - tire_mgmt) / 100 * 0.2  # Poor tire mgmt slows down
+
+        # Energy deployment impact (AMPLIFIED - 2x more impact for demo)
+        # Low (30) = +0.3s, Medium (60) = baseline, High (90) = -0.6s
+        lap_time -= (energy / 100) * 0.6  # Doubled from 0.3 to 0.6
+
+        # Tire management impact (AMPLIFIED)
+        lap_time += (100 - tire_mgmt) / 100 * 0.4  # Doubled from 0.2 to 0.4
+
+        # Battery penalty (AMPLIFIED)
         if player.battery_soc < 20:
-            lap_time += (20 - player.battery_soc) * 0.02  # Battery penalty
+            lap_time += (20 - player.battery_soc) * 0.04  # Doubled from 0.02 to 0.04
         if self.game_state.is_raining:
             lap_time += 2.0  # Rain penalty
         if self.game_state.safety_car_active:
@@ -164,25 +185,33 @@ class GameLoopOrchestrator:
             else:  # Balanced
                 energy, tire_mgmt, fuel_strat, ers = 60, 75, 70, 65
 
-            # Battery dynamics
-            battery_drain = (energy / 100) * 0.8
-            battery_gain = (ers / 100) * 0.6
+            # Battery dynamics (AMPLIFIED to match player)
+            battery_drain = (energy / 100) * 1.2  # Increased from 0.8 to 1.2
+            battery_gain = (ers / 100) * 0.8      # Increased from 0.6 to 0.8
             opponent.battery_soc = max(0, min(100, opponent.battery_soc - battery_drain + battery_gain))
 
-            # Tire degradation
-            tire_wear = (100 - tire_mgmt) / 100 * 1.5
+            # Tire degradation (AMPLIFIED to match player - aggressive = 2x faster wear)
+            base_tire_wear = (100 - tire_mgmt) / 100 * 1.5
+            if tire_mgmt < 50:  # Aggressive tire usage
+                tire_wear = base_tire_wear * 2.0  # Double wear when aggressive
+            else:
+                tire_wear = base_tire_wear
             opponent.tire_life = max(0, opponent.tire_life - tire_wear)
 
-            # Fuel consumption
-            fuel_burn = (100 - fuel_strat) / 100 * 0.5
+            # Fuel consumption (AMPLIFIED to match player - aggressive = 1.5x faster burn)
+            base_fuel_burn = (100 - fuel_strat) / 100 * 0.5
+            if fuel_strat < 50:  # Aggressive fuel usage
+                fuel_burn = base_fuel_burn * 1.5  # 50% more fuel burn
+            else:
+                fuel_burn = base_fuel_burn
             opponent.fuel_remaining = max(0, opponent.fuel_remaining - fuel_burn)
 
-            # Lap time
+            # Lap time (AMPLIFIED to match player)
             lap_time = 90.0
-            lap_time -= (energy / 100) * 0.3
-            lap_time += (100 - tire_mgmt) / 100 * 0.2
+            lap_time -= (energy / 100) * 0.6  # Doubled from 0.3 to 0.6
+            lap_time += (100 - tire_mgmt) / 100 * 0.4  # Doubled from 0.2 to 0.4
             if opponent.battery_soc < 20:
-                lap_time += (20 - opponent.battery_soc) * 0.02
+                lap_time += (20 - opponent.battery_soc) * 0.04  # Doubled from 0.02 to 0.04
             if self.game_state.is_raining:
                 lap_time += 2.0
             if self.game_state.safety_car_active:

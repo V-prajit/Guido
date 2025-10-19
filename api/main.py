@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import os
 import asyncio
 import multiprocessing as mp
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dotenv import load_dotenv
 import time
 import glob
@@ -16,6 +16,9 @@ load_dotenv()
 MP_CTX = mp.get_context("spawn")
 MAX_WORKERS = int(os.getenv("MAX_WORKERS") or min(mp.cpu_count(), 8))
 EXECUTOR = ProcessPoolExecutor(max_workers=MAX_WORKERS, mp_context=MP_CTX)
+
+# Thread pool for I/O-bound tasks
+THREAD_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 
 app = FastAPI(title="Strategy Gym 2026")
 

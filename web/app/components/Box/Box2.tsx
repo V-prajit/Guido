@@ -141,7 +141,7 @@ export default function Box2({ className, style }: BoxProps) {
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
       <div className="relative z-[1] flex flex-1 flex-col p-4 items-center justify-center">
-        <h3 className="absolute top-3 text-sm font-bold text-gray-400 tracking-widest uppercase">
+        <h3 className="absolute top-3 text-lg font-bold text-gray-400 tracking-widest uppercase">
           Propulsion Status
         </h3>
         <div className="flex items-start justify-center gap-8 w-full mt-8">
@@ -150,10 +150,10 @@ export default function Box2({ className, style }: BoxProps) {
             <FlatGauge value={liveTelemetry.energy} maxValue={100} />
             <div className="text-center w-28 h-16">
               <div className="flex justify-center items-center gap-1.5">
-                <p className="text-xs font-bold tracking-wider uppercase">ENERGY</p>
-                <p className="font-mono text-xs font-bold text-cyan-400">[{ersMode}]</p>
+                <p className="text-sm font-bold tracking-wider uppercase">ENERGY</p>
+                <p className="font-mono text-sm font-bold text-cyan-400">[{ersMode}]</p>
               </div>
-              <p className="text-xl font-bold text-text-primary">{liveTelemetry.energy.toFixed(1)}<span className="text-xs text-text-secondary font-medium ml-1">%</span></p>
+              <p className="text-4xl font-bold text-text-primary">{liveTelemetry.energy.toFixed(1)}<span className="text-base text-text-secondary font-medium ml-1">%</span></p>
             </div>
             <Sparkline data={history.energy} color="#06b6d4" />
           </div>
@@ -161,8 +161,8 @@ export default function Box2({ className, style }: BoxProps) {
           <div className="flex flex-col items-center gap-1">
             <FlatGauge value={liveTelemetry.fuel} maxValue={MAX_FUEL} />
             <div className="text-center w-28 h-16">
-              <p className="text-xs font-bold tracking-wider uppercase">FUEL</p>
-              <p className="text-xl font-bold text-text-primary">{liveTelemetry.fuel.toFixed(2)}<span className="text-xs text-text-secondary font-medium ml-1">kg</span></p>
+              <p className="text-sm font-bold tracking-wider uppercase">FUEL</p>
+              <p className="text-4xl font-bold text-text-primary">{liveTelemetry.fuel.toFixed(2)}<span className="text-base text-text-secondary font-medium ml-1">kg</span></p>
             </div>
             <Sparkline data={history.fuel} color="#a855f7" />
           </div>

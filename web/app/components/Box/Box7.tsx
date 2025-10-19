@@ -14,7 +14,7 @@ const baseClasses =
 
 const defaultLayout: CSSProperties = {
   gridColumn: '10 / span 3',
-  gridRow: '6 / span 3',
+  gridRow: '4 / span 5',
 };
 
 const overlayStyle: CSSProperties = {
@@ -47,10 +47,10 @@ export default function Box7({ className, style, children }: BoxProps) {
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
       <div className="relative z-[1] flex flex-1 flex-col p-6">
-        <h3 className="text-sm font-bold text-text-primary mb-4 tracking-wide">DECISION LOG</h3>
+        <h3 className="text-lg font-bold text-text-primary mb-4 tracking-wide">DECISION LOG</h3>
         <div className="space-y-2 max-h-full overflow-y-auto">
           {!gameStarted || decisionHistory.length === 0 ? (
-            <div className="text-xs text-text-secondary">No decisions made yet</div>
+            <div className="text-sm text-text-secondary">No decisions made yet</div>
           ) : (
             decisionHistory.slice().reverse().map((decision, index) => (
               <div
@@ -61,12 +61,12 @@ export default function Box7({ className, style, children }: BoxProps) {
               >
                 <div className="flex-1">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-text-primary">Lap {decision.lap}</span>
-                    <span className="text-xs text-text-secondary/40">
+                    <span className="text-base font-medium text-text-primary">Lap {decision.lap}</span>
+                    <span className="text-sm text-text-secondary/40">
                       {formatTime(decision.timestamp)}
                     </span>
                   </div>
-                  <p className="text-xs text-text-secondary">
+                  <p className="text-sm text-text-secondary">
                     {EVENT_LABELS[decision.event_type] || decision.event_type}
                   </p>
                 </div>
