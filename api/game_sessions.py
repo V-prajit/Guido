@@ -99,17 +99,17 @@ class GameSessionManager:
         """Create a new game session"""
         session_id = str(uuid.uuid4())
 
-        # Initialize player state (P1 - front of grid)
+        # Initialize player state (EQUAL START - no grid advantage)
         player = PlayerState(
-            position=1,  # Start optimistically
+            position=0,  # Will be determined after first lap
             battery_soc=100.0,
             tire_life=100.0,
             fuel_remaining=100.0,
             lap_time=90.0,
-            cumulative_time=0.0,  # P1 at front
+            cumulative_time=0.0,  # Equal start
             speed=300.0,  # Starting speed (km/h)
             gap_to_leader=0.0,  # No gap at start
-            lap_progress=0.0,  # Front of grid
+            lap_progress=0.0,  # Equal start on grid
             energy_deployment=60.0,
             tire_management=70.0,
             fuel_strategy=65.0,
@@ -118,7 +118,7 @@ class GameSessionManager:
             defense_intensity=50.0
         )
 
-        # Initialize AI opponents (7 opponents)
+        # Initialize AI opponents (7 opponents) - EQUAL START
         opponents = []
         opponent_names = [
             ("VerstappenStyle", "Max Verstappen"),
@@ -131,20 +131,19 @@ class GameSessionManager:
         ]
 
         for i, (agent_type, name) in enumerate(opponent_names):
-            # Grid spacing: stagger cars by 1.5 seconds per position (simulates ~25m gap)
-            grid_offset = (i + 1) * 1.5  # 1.5s per grid position
-
+            # EQUAL START: All cars start at cumulative_time=0.0
+            # Positions will be determined naturally by lap times and strategy
             opponents.append(OpponentState(
                 name=name,
                 agent_type=agent_type,
-                position=i + 2,  # Positions 2-8
-                lap_progress=(grid_offset / 90.0) / total_laps,  # Convert time offset to lap progress
+                position=0,  # Will be determined after first lap
+                lap_progress=0.0,  # Equal start on grid
                 battery_soc=100.0,
                 tire_life=100.0,
                 fuel_remaining=100.0,
-                cumulative_time=grid_offset,  # Stagger by grid position
+                cumulative_time=0.0,  # Equal start - no grid advantage
                 speed=300.0,  # Starting speed (km/h)
-                gap_to_leader=grid_offset,  # Gap to P1 equals time offset
+                gap_to_leader=0.0,  # No gap at start
                 last_lap_time=90.0
             ))
 

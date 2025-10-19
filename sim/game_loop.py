@@ -272,15 +272,20 @@ class GameLoopOrchestrator:
         Convert lap_time to approximate speed in km/h for visualization.
 
         Faster laps = higher speed.
-        Base: 90s lap = 300 km/h
-        Every second faster/slower = ~10 km/h change
+        Accounts for LAP_TIME_MULTIPLIER to show accurate speeds in demo mode.
         """
-        base_speed = 300.0  # km/h at 90s lap
-        speed_delta = (90.0 - lap_time) * 10.0  # Each second difference = 10 km/h
+        # Expected lap time in demo units (e.g., 90s / 5.0 = 18s)
+        expected_demo_time = self.base_lap_time / self.lap_time_multiplier
+
+        base_speed = 300.0  # km/h at expected demo lap time
+
+        # Speed delta: each second faster/slower = ~50 km/h change (increased sensitivity)
+        # This gives visible speed differences in demo mode
+        speed_delta = (expected_demo_time - lap_time) * 50.0
         speed = base_speed + speed_delta
 
-        # Clamp to realistic F1 speeds (200-350 km/h)
-        return max(200.0, min(350.0, speed))
+        # Clamp to realistic F1 speeds (250-330 km/h for tighter visual range)
+        return max(250.0, min(330.0, speed))
 
     def check_for_decision_point(self) -> Optional[Dict]:
         """
