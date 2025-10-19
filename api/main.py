@@ -292,6 +292,206 @@ async def health_check():
         "max_workers": MAX_WORKERS
     }
 
+
+# ==========================================
+# GAME MODE - WEBSOCKET ENDPOINT
+# ==========================================
+
+from fastapi import WebSocket, WebSocketDisconnect
+from api.game_sessions import session_manager, GameState
+from sim.game_loop import GameLoopOrchestrator
+from dataclasses import asdict
+
+
+@app.websocket("/ws/game/{session_id}")
+async def game_websocket(websocket: WebSocket, session_id: str):
+    """
+    WebSocket endpoint for interactive game mode.
+
+    Client sends:
+    - START_GAME: Initialize new race
+    - SELECT_STRATEGY: Choose strategy during decision point
+
+    Server sends:
+    - RACE_STARTED: Race initialized
+    - LAP_UPDATE: Lap-by-lap race state
+    - DECISION_POINT: Pause for player decision with recommendations
+    - RACE_COMPLETE: Race finished
+    """
+    await websocket.accept()
+
+    game_state: GameState = None
+    orchestrator: GameLoopOrchestrator = None
+
+    try:
+        while True:
+            # Receive message from client
+            data = await websocket.receive_json()
+            message_type = data.get('type')
+
+            # ==========================================
+            # START GAME
+            # ==========================================
+            if message_type == 'START_GAME':
+                # Create new game session
+                player_name = data.get('player_name', 'Player')
+                total_laps = data.get('total_laps', 57)
+                rain_lap = data.get('rain_lap')
+                safety_car_lap = data.get('safety_car_lap')
+
+                # Use provided session_id or create new one
+                new_session_id = session_manager.create_session(
+                    player_name=player_name,
+                    total_laps=total_laps,
+                    rain_lap=rain_lap,
+                    safety_car_lap=safety_car_lap
+                )
+
+                # Get game state
+                game_state = session_manager.get_session(new_session_id)
+                orchestrator = GameLoopOrchestrator(game_state)
+
+                # Send RACE_STARTED message
+                await websocket.send_json({
+                    'type': 'RACE_STARTED',
+                    'session_id': new_session_id,
+                    'total_laps': total_laps,
+                    'player': asdict(game_state.player),
+                    'opponents': [asdict(opp) for opp in game_state.opponents]
+                })
+
+                # Start auto-advancing laps
+                await run_race_loop(websocket, orchestrator, game_state)
+
+            # ==========================================
+            # SELECT STRATEGY
+            # ==========================================
+            elif message_type == 'SELECT_STRATEGY':
+                if not orchestrator:
+                    await websocket.send_json({
+                        'type': 'ERROR',
+                        'message': 'No active game session'
+                    })
+                    continue
+
+                strategy_id = data.get('strategy_id', 0)
+
+                # Apply chosen strategy
+                success = orchestrator.apply_strategy_choice(strategy_id)
+
+                if success:
+                    # Resume race
+                    game_state.is_paused = False
+                    game_state.current_decision_point = None
+
+                    # Send confirmation
+                    await websocket.send_json({
+                        'type': 'STRATEGY_APPLIED',
+                        'strategy_id': strategy_id
+                    })
+
+                    # Continue race
+                    await run_race_loop(websocket, orchestrator, game_state)
+                else:
+                    await websocket.send_json({
+                        'type': 'ERROR',
+                        'message': 'Invalid strategy selection'
+                    })
+
+    except WebSocketDisconnect:
+        # Cleanup session on disconnect
+        if game_state:
+            session_manager.delete_session(game_state.session_id)
+    except Exception as e:
+        await websocket.send_json({
+            'type': 'ERROR',
+            'message': 'Game error',
+            'details': str(e)
+        })
+
+
+async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator, game_state: GameState):
+    """
+    Run the race lap-by-lap, pausing for decision points.
+    """
+    while not game_state.is_complete and not game_state.is_paused:
+        # Advance one lap
+        lap_result = orchestrator.advance_lap()
+
+        # Update session
+        session_manager.update_session(game_state.session_id, game_state)
+
+        # Send lap update to client
+        await websocket.send_json({
+            'type': 'LAP_UPDATE',
+            'lap': lap_result['lap'],
+            'player': lap_result.get('player'),
+            'opponents': lap_result.get('opponents', []),
+            'is_raining': lap_result.get('is_raining', False),
+            'safety_car_active': lap_result.get('safety_car_active', False)
+        })
+
+        # Check if race is complete
+        if lap_result.get('race_complete'):
+            await websocket.send_json({
+                'type': 'RACE_COMPLETE',
+                'final_position': lap_result['final_position'],
+                'player': asdict(game_state.player),
+                'opponents': [asdict(opp) for opp in game_state.opponents],
+                'decision_count': len(game_state.decision_history),
+                'race_summary': {
+                    'total_laps': game_state.total_laps,
+                    'decisions_made': len(game_state.decision_history)
+                }
+            })
+            break
+
+        # Check for decision points
+        decision_check = orchestrator.check_for_decision_point()
+
+        if decision_check.get('triggered'):
+            # Pause game
+            game_state.is_paused = True
+
+            # Get recommendations from GameAdvisor
+            event_type = decision_check['event_type']
+            current_state = decision_check['state']
+
+            # Run quick sims + Gemini analysis
+            recommendations = await orchestrator.get_decision_recommendations(
+                event_type=event_type,
+                current_state=current_state
+            )
+
+            # Send decision point to client
+            await websocket.send_json({
+                'type': 'DECISION_POINT',
+                'event_type': event_type,
+                'lap': current_state.lap,
+                'position': current_state.position,
+                'battery_soc': current_state.battery_soc,
+                'tire_life': current_state.tire_life,
+                'fuel_remaining': current_state.fuel_remaining,
+                'recommended': recommendations['recommended'],
+                'avoid': recommendations.get('avoid'),
+                'latency_ms': recommendations.get('latency_ms', 0),
+                'used_fallback': recommendations.get('used_fallback', False)
+            })
+
+            # Store decision point
+            game_state.current_decision_point = {
+                'event_type': event_type,
+                'recommendations': recommendations
+            }
+
+            # Wait for player to select strategy
+            # (race loop pauses here, client sends SELECT_STRATEGY)
+            break
+
+        # Pacing: Wait 500ms between laps for visualization
+        await asyncio.sleep(0.5)
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

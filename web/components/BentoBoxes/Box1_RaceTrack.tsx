@@ -37,7 +37,7 @@ interface TrackPoint {
   y: number;
 }
 
-// Mock data - replace with real data from your backend
+// Mock data - replace with real data from your backend (now supports 8 cars for full game mode)
 const MOCK_CARS: CarData[] = [
   {
     id: "car-1",
@@ -68,11 +68,47 @@ const MOCK_CARS: CarData[] = [
   },
   {
     id: "car-4",
-    driverName: "Leclerc",
+    driverName: "Alonso",
     position: 4,
     lapProgress: 0.42,
     speed: 287,
     lapTime: "1:33.125",
+    isUserCar: false,
+  },
+  {
+    id: "car-5",
+    driverName: "Leclerc",
+    position: 5,
+    lapProgress: 0.35,
+    speed: 284,
+    lapTime: "1:33.412",
+    isUserCar: false,
+  },
+  {
+    id: "car-6",
+    driverName: "Perez",
+    position: 6,
+    lapProgress: 0.28,
+    speed: 280,
+    lapTime: "1:33.689",
+    isUserCar: false,
+  },
+  {
+    id: "car-7",
+    driverName: "Norris",
+    position: 7,
+    lapProgress: 0.22,
+    speed: 276,
+    lapTime: "1:33.891",
+    isUserCar: false,
+  },
+  {
+    id: "car-8",
+    driverName: "Piastri",
+    position: 8,
+    lapProgress: 0.15,
+    speed: 272,
+    lapTime: "1:34.125",
     isUserCar: false,
   },
 ];
@@ -324,6 +360,34 @@ const Box1_RaceTrack: React.FC<Box1_RaceTrackProps> = ({ cars = MOCK_CARS }) => 
                       }}
                     />
                   )}
+
+                  {/* Position badge */}
+                  <text
+                    x={position.x}
+                    y={position.y - 18}
+                    fill={car.isUserCar ? "#3b82f6" : "#ffffff"}
+                    fontSize="10"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                  >
+                    P{car.position}
+                  </text>
+
+                  {/* Driver name label */}
+                  <text
+                    x={position.x}
+                    y={position.y + 22}
+                    fill={car.isUserCar ? "#3b82f6" : "#d4d4d8"}
+                    fontSize="9"
+                    fontWeight="600"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                  >
+                    {car.driverName}
+                  </text>
                 </g>
               );
             })}
