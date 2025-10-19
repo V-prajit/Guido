@@ -129,8 +129,11 @@ def _generate_single_scenario(scenario_id: int, baseline: dict) -> dict:
         p=[0.60, 0.20, 0.20]
     )
 
-    # Realistic temperature range from 2024 Bahrain night race
-    temp_range = baseline.get('track_characteristics', {}).get('temperature_range', [17.6, 18.9])
+    # Temperature range for strategic diversity
+    # For discovery/training: use wide range (15-35°C) to test hot/cold strategies
+    # For Bahrain-specific validation: [17.6, 18.9°C] from 2024 data
+    # Default to wide range for strategy exploration
+    temp_range = [15, 35]  # Wide range creates hot/cold strategic diversity
     temperature = float(np.random.uniform(temp_range[0], temp_range[1]))
 
     # Wind conditions affect straight-line speed and overtaking

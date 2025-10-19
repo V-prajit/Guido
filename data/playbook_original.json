@@ -1,0 +1,97 @@
+{
+  "rules": [
+    {
+      "rule": "General Race Pace & Tire Preservation",
+      "condition": "true",
+      "action": {
+        "energy_deployment": 32,
+        "tire_management": 75,
+        "fuel_strategy": 56,
+        "ers_mode": 25,
+        "overtake_aggression": 61,
+        "defense_intensity": 79
+      },
+      "confidence": 0.95,
+      "uplift_win_pct": 20.0,
+      "rationale": "This rule encapsulates the fundamental differences between winning and losing strategies across the simulation. Top performers consistently show higher tire management, overtake aggression, and energy deployment, suggesting a balanced approach to sustained performance and competitive positioning."
+    },
+    {
+      "rule": "Early Race Aggression for Track Position",
+      "condition": "lap < 15",
+      "action": {
+        "energy_deployment": 55,
+        "tire_management": 82,
+        "fuel_strategy": 56,
+        "ers_mode": 25,
+        "overtake_aggression": 61,
+        "defense_intensity": 79
+      },
+      "confidence": 0.9,
+      "uplift_win_pct": 25.0,
+      "rationale": "In the early phase of the race, winning strategies deploy significantly more electric energy and demonstrate higher overtake aggression to gain crucial track position. Crucially, this is paired with exceptionally high tire management, indicating that aggressive early moves must be executed without undue tire degradation."
+    },
+    {
+      "rule": "Late Race Energy & Tire Resilience with Low Battery",
+      "condition": "battery_soc < 30 && lap > 40",
+      "action": {
+        "energy_deployment": 35,
+        "tire_management": 72,
+        "fuel_strategy": 56,
+        "ers_mode": 24,
+        "overtake_aggression": 61,
+        "defense_intensity": 79
+      },
+      "confidence": 0.88,
+      "uplift_win_pct": 18.0,
+      "rationale": "Even with dwindling battery resources late in the race, winning strategies maintain a slightly higher energy deployment and ERS mode. The most significant differentiator is the massively superior tire management compared to losers, allowing them to sustain pace and hold position despite low battery and late race wear."
+    },
+    {
+      "rule": "Compensatory Energy Use with Degraded Tires",
+      "condition": "tire_life < 30",
+      "action": {
+        "energy_deployment": 41,
+        "tire_management": 25,
+        "fuel_strategy": 56,
+        "ers_mode": 25,
+        "overtake_aggression": 51,
+        "defense_intensity": 79
+      },
+      "confidence": 0.8,
+      "uplift_win_pct": 15.0,
+      "rationale": "When tires are degraded, winning strategies compensate by deploying significantly more electric energy to maintain performance and make opportunistic overtakes. While tire management is inherently lower due to degradation, winners still show a slight edge in managing the remaining grip, combined with strategic energy boosts."
+    },
+    {
+      "rule": "Consistent High Defensive Stance",
+      "condition": "true",
+      "action": {
+        "energy_deployment": 32,
+        "tire_management": 75,
+        "fuel_strategy": 56,
+        "ers_mode": 25,
+        "overtake_aggression": 61,
+        "defense_intensity": 79
+      },
+      "confidence": 0.9,
+      "uplift_win_pct": 10.0,
+      "rationale": "Both winning and losing strategies exhibit a high and very similar level of defensive intensity. This suggests that maintaining a strong defensive posture is a universal baseline requirement for competitiveness, regardless of overall performance, helping to retain hard-won track position."
+    }
+  ],
+  "generated_at": "2025-10-19T01:49:52.524899",
+  "num_simulations": 100,
+  "schema_version": "2.0",
+  "variables": [
+    "energy_deployment",
+    "tire_management",
+    "fuel_strategy",
+    "ers_mode",
+    "overtake_aggression",
+    "defense_intensity"
+  ],
+  "generation_method": "gemini_discovery",
+  "source_data": {
+    "csv_path": "data/discovery_runs.csv",
+    "num_scenarios": 100,
+    "num_agents": 33,
+    "total_rows": 188100
+  }
+}

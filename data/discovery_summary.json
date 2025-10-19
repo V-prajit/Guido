@@ -1,0 +1,49 @@
+{
+  "num_scenarios": 100,
+  "num_strategies": 30,
+  "num_agents": 33,
+  "total_rows": 188100,
+  "generation_time": 3.6252028942108154,
+  "top_performers": {
+    "won": {
+      "Explorer_022": 3648,
+      "Explorer_025": 1140,
+      "VerstappenStyle": 912,
+      "AlonsoStyle": 0,
+      "Explorer_000": 0,
+      "Explorer_001": 0,
+      "Explorer_002": 0,
+      "Explorer_003": 0,
+      "Explorer_004": 0,
+      "Explorer_005": 0
+    },
+    "final_position": {
+      "Explorer_022": 3.48,
+      "Explorer_025": 2.88,
+      "VerstappenStyle": 17.57,
+      "AlonsoStyle": 17.61,
+      "Explorer_000": 32.0,
+      "Explorer_001": 31.0,
+      "Explorer_002": 33.0,
+      "Explorer_003": 27.57,
+      "Explorer_004": 24.24,
+      "Explorer_005": 29.36
+    },
+    "lap_time": {
+      "Explorer_022": 92.0,
+      "Explorer_025": 91.78,
+      "VerstappenStyle": 94.55,
+      "AlonsoStyle": 94.55,
+      "Explorer_000": 98.65,
+      "Explorer_001": 98.14,
+      "Explorer_002": 98.9,
+      "Explorer_003": 97.49,
+      "Explorer_004": 96.98,
+      "Explorer_005": 97.74
+    }
+  },
+  "winner_stats": {
+    "total_races": 100,
+    "unique_winners": 3
+  }
+}

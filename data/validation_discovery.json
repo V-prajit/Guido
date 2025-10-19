@@ -1,0 +1,53 @@
+{
+  "num_scenarios": 50,
+  "elapsed_time": 0.41084885597229004,
+  "agent_performance": {
+    "won": {
+      "TireWhisperer": 32,
+      "VerstappenStyle": 7,
+      "AdaptiveAI_Original": 4,
+      "Opportunist": 4,
+      "AdaptiveAI_Discovered": 3,
+      "AlonsoStyle": 0,
+      "ElectricBlitzer": 0,
+      "EnergySaver": 0,
+      "HamiltonStyle": 0
+    },
+    "final_position": {
+      "TireWhisperer": 2.8,
+      "VerstappenStyle": 7.62,
+      "AdaptiveAI_Original": 3.62,
+      "Opportunist": 2.42,
+      "AdaptiveAI_Discovered": 3.56,
+      "AlonsoStyle": 7.34,
+      "ElectricBlitzer": 5.98,
+      "EnergySaver": 5.68,
+      "HamiltonStyle": 5.98
+    },
+    "lap_time": {
+      "TireWhisperer": 93.93,
+      "VerstappenStyle": 93.74,
+      "AdaptiveAI_Original": 94.53,
+      "Opportunist": 94.86,
+      "AdaptiveAI_Discovered": 94.45,
+      "AlonsoStyle": 94.72,
+      "ElectricBlitzer": 104.42,
+      "EnergySaver": 96.11,
+      "HamiltonStyle": 93.29
+    },
+    "win_rate": {
+      "TireWhisperer": 64.0,
+      "VerstappenStyle": 14.0,
+      "AdaptiveAI_Original": 8.0,
+      "Opportunist": 8.0,
+      "AdaptiveAI_Discovered": 6.0,
+      "AlonsoStyle": 0.0,
+      "ElectricBlitzer": 0.0,
+      "EnergySaver": 0.0,
+      "HamiltonStyle": 0.0
+    }
+  },
+  "discovered_wins": 3,
+  "original_wins": 4,
+  "validation_passed": "False"
+}

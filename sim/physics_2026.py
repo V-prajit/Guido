@@ -42,20 +42,27 @@ def calculate_lap_time(
     state: RaceState,
     baseline: Dict[str, Any],
     tire_compound: str = 'HARD',
-    use_2026_rules: bool = True
+    use_2026_rules: bool = True,
+    track_type: str = 'balanced',
+    temperature: float = 25.0
 ) -> float:
     """
-    Calculate lap time with optional 2026 rules.
+    Calculate lap time with optional 2026 rules and scenario-specific effects.
 
     2026 CHANGES:
     - Energy deployment effect: 3x stronger (0.012 → 0.036 seconds per %)
     - At 100% deployment: 3.6s faster per lap (vs 1.2s in 2024)
     - Strategic impact: Energy becomes dominant variable
 
-    All other physics remain identical to 2024:
-    - Tire degradation (unchanged)
-    - Fuel weight penalty (unchanged)
-    - Fuel strategy effects (unchanged)
+    TRACK TYPE EFFECTS (creates strategic diversity):
+    - 'power': Energy deployment 1.3x more effective (Monza, Baku)
+    - 'technical': Tire management 1.3x more important (Monaco, Singapore)
+    - 'balanced': Neutral multipliers (default)
+
+    TEMPERATURE EFFECTS:
+    - Hot (>30°C): +30% tire degradation
+    - Cold (<22°C): -20% tire degradation
+    - Normal (22-30°C): baseline degradation
 
     Args:
         decision: Agent's strategic decisions for this lap
@@ -63,6 +70,8 @@ def calculate_lap_time(
         baseline: Physics parameters from baseline_2024.json
         tire_compound: 'SOFT' or 'HARD' (default: 'HARD')
         use_2026_rules: If True, apply 3x electric power boost (default: True)
+        track_type: 'power' | 'technical' | 'balanced' (default: 'balanced')
+        temperature: Ambient temperature in Celsius (default: 25.0)
 
     Returns:
         float: Lap time in seconds
@@ -71,10 +80,10 @@ def calculate_lap_time(
         >>> decision = AgentDecision(75, 60, 50, 70, 80, 70)
         >>> state = RaceState(10, 85.0, 3, 10, 85.0, 80.0, 0)
         >>> baseline = load_baseline()
-        >>> lap_2024 = calculate_lap_time(decision, state, baseline, use_2026_rules=False)
-        >>> lap_2026 = calculate_lap_time(decision, state, baseline, use_2026_rules=True)
-        >>> print(f"2024: {lap_2024:.2f}s, 2026: {lap_2026:.2f}s")
-        >>> print(f"2026 is {lap_2024 - lap_2026:.2f}s faster")
+        >>> # Power track favors high energy deployment
+        >>> lap_power = calculate_lap_time(decision, state, baseline, track_type='power')
+        >>> # Technical track favors high tire management
+        >>> lap_tech = calculate_lap_time(decision, state, baseline, track_type='technical')
     """
     # Start with tire compound base time
     tire_data = baseline['tire_compounds'][tire_compound]
@@ -83,14 +92,37 @@ def calculate_lap_time(
 
     lap_time = base_time
 
-    # 1. Tire degradation effect (UNCHANGED from 2024)
+    # Track type multipliers (creates scenario-dependent optimal strategies)
+    energy_track_multiplier = 1.0
+    tire_track_multiplier = 1.0
+
+    if track_type == 'power':
+        # Power tracks (Monza, Baku): Long straights favor energy deployment
+        # EXTREME multipliers to create clear track-specific winners
+        energy_track_multiplier = 2.0  # Double energy effectiveness
+        tire_track_multiplier = 0.5    # Tires half as important
+    elif track_type == 'technical':
+        # Technical tracks (Monaco, Singapore): Tight corners favor tire management
+        energy_track_multiplier = 0.5  # Energy half as effective
+        tire_track_multiplier = 2.0    # Double tire importance
+    # 'balanced' uses 1.0 for both (no change)
+
+    # Temperature-based tire degradation multiplier
+    temp_multiplier = 1.0
+    if temperature > 30:
+        temp_multiplier = 1.5  # Hot: +50% tire degradation (more punishing)
+    elif temperature < 22:
+        temp_multiplier = 0.7  # Cold: -30% tire degradation (more forgiving)
+
+    # 1. Tire degradation effect (ENHANCED with track type and temperature)
     degradation_factor = 2.0 - (decision.tire_management / 100.0)
-    tire_degradation_penalty = state.tire_age * deg_rate * degradation_factor
+    # Apply track type multiplier to tire importance
+    tire_degradation_penalty = state.tire_age * deg_rate * degradation_factor * tire_track_multiplier * temp_multiplier
     lap_time += tire_degradation_penalty
 
-    # Extra penalty if tire_life is very low
+    # Extra penalty if tire_life is very low (also affected by temperature)
     if state.tire_life < 30:
-        lap_time += (30 - state.tire_life) * 0.05
+        lap_time += (30 - state.tire_life) * 0.05 * temp_multiplier
 
     # 2. Fuel weight effect (UNCHANGED from 2024)
     # NOTE: Base lap time already accounts for average fuel load (55kg mid-race)
@@ -99,12 +131,42 @@ def calculate_lap_time(
     fuel_effect = baseline['fuel_effect']['penalty_per_kg']
     lap_time += (state.fuel_remaining - avg_fuel) * fuel_effect
 
-    # 3. Energy deployment bonus (CHANGED FOR 2026)
+    # 3. Energy deployment bonus (ENHANCED FOR 2026 with track type and diminishing returns)
     # 2024: 120kW MGU-K → 0.03s per % (at 30% deploy = 0.9s faster)
     # 2026: 350kW MGU-K → 0.09s per % (3x multiplier, at 30% deploy = 2.7s faster)
     energy_multiplier = 3.0 if use_2026_rules else 1.0
-    energy_bonus = decision.energy_deployment * 0.03 * energy_multiplier
+
+    # Apply diminishing returns for very high energy deployment (>80%)
+    # This prevents single "max everything" dominant strategy
+    effective_energy = decision.energy_deployment
+    if effective_energy > 80:
+        # Energy above 80% is only 70% as effective
+        effective_energy = 80 + (effective_energy - 80) * 0.7
+
+    # Apply track type multiplier to energy effectiveness
+    energy_bonus = effective_energy * 0.03 * energy_multiplier * energy_track_multiplier
     lap_time -= energy_bonus
+
+    # ADDITIONAL: Track-specific strategic bonuses/penalties
+    # This creates clear track-type winners by rewarding specialized strategies
+    if track_type == 'power':
+        # Power tracks: Bonus for high energy, penalty for low energy
+        if decision.energy_deployment > 75:
+            lap_time -= 2.0  # 2s bonus for energy specialists on power tracks
+        elif decision.energy_deployment < 50:
+            lap_time += 2.5  # 2.5s penalty for low energy on power tracks
+        # Penalty for being too balanced (high both energy AND tire)
+        if decision.energy_deployment > 75 and decision.tire_management > 75:
+            lap_time += 2.5  # Strong penalty to force specialization
+    elif track_type == 'technical':
+        # Technical tracks: Bonus for high tire management, penalty for low
+        if decision.tire_management > 85:
+            lap_time -= 2.0  # 2s bonus for tire specialists on technical tracks
+        elif decision.tire_management < 60:
+            lap_time += 2.5  # 2.5s penalty for low tire management on technical tracks
+        # Penalty for being too balanced
+        if decision.tire_management > 85 and decision.energy_deployment > 65:
+            lap_time += 2.5  # Strong penalty to force specialization
 
     # 4. Fuel strategy effect (UNCHANGED from 2024)
     if decision.fuel_strategy < 40:
@@ -117,9 +179,12 @@ def calculate_lap_time(
     if decision.tire_management < 20:
         lap_time += 0.15
 
-    # 6. Battery low penalty (UNCHANGED from 2024)
+    # 6. Battery low penalty (INCREASED to discourage running out completely)
+    # Old: 0.02s per % below 20% (max +0.4s at 0%)
+    # New: 0.05s per % below 20% (max +1.0s at 0%)
+    # This makes energy conservation more strategic
     if state.battery_soc < 20:
-        lap_time += (20 - state.battery_soc) * 0.02
+        lap_time += (20 - state.battery_soc) * 0.05
 
     return lap_time
 

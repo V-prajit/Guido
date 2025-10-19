@@ -161,8 +161,14 @@ def simulate_lap(
         # Agent makes decision based on current state
         decision = agent.decide(state)
 
-        # Calculate lap time using realistic physics
-        lap_time = calculate_lap_time(decision, state, baseline, 'HARD', use_2026_rules)
+        # Calculate lap time using realistic physics with scenario-specific effects
+        track_type = scenario.get('track_type', 'balanced')
+        temperature = scenario.get('temperature', 25.0)
+        lap_time = calculate_lap_time(
+            decision, state, baseline, 'HARD', use_2026_rules,
+            track_type=track_type,
+            temperature=temperature
+        )
 
         # Apply rain penalty if applicable
         if scenario.get('rain_lap') == lap_num:
