@@ -70,9 +70,12 @@ const FlatGauge: React.FC<FlatGaugeProps> = ({ value, maxValue, label, unit }) =
           <circle cx="50" cy="50" r="3" fill="#E5E7EB" />
         </motion.g>
       </svg>
-      <div className="flex flex-col items-center text-center">
-        <p className="text-2xl font-bold text-text-primary">{value.toFixed(2)}</p>
-        <p className="text-xs text-text-secondary uppercase">{unit}</p>
+      <div className="flex flex-col items-center text-center mt-2">
+        <p className="text-sm font-bold text-text-primary uppercase tracking-wider">{label}</p>
+        <div className="flex items-baseline gap-1">
+          <p className="text-2xl font-bold text-text-primary">{value.toFixed(2)}</p>
+          <p className="text-xs text-text-secondary uppercase">{unit}</p>
+        </div>
       </div>
     </div>
   );
