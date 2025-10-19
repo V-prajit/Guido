@@ -5,26 +5,18 @@
 
 html {
   scroll-behavior: smooth;
-  background-color: #080a13;
+  background-color: #0f1419;
 }
 
 body {
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
-  color: #f0f2ff;
-  background:
-    radial-gradient(circle at 15% 15%, rgba(255, 90, 71, 0.22), transparent 45%),
-    radial-gradient(circle at 85% 20%, rgba(255, 184, 79, 0.18), transparent 50%),
-    linear-gradient(120deg, rgba(255, 255, 255, 0.04) 24%, transparent 24%),
-    linear-gradient(120deg, transparent 76%, rgba(255, 255, 255, 0.04) 76%),
-    #080a13;
-  background-size: 100% 100%, 100% 100%, 20px 20px, 20px 20px, auto;
-  background-position: 0 0, 0 0, 0 0, 10px 10px, 0 0;
-  background-repeat: no-repeat, no-repeat, repeat, repeat, no-repeat;
+  color: #e6edf3;
+  background-color: #0f1419;
 }
 
 ::selection {
-  background: rgba(255, 90, 71, 0.45);
+  background: #2ea043;
   color: #fff;
 }
 

@@ -8,11 +8,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'f1-red': '#FF1801',
-        'f1-black': '#000000',
-        'f1-white': '#FFFFFF',
-        'f1-gray': '#333333',
-        'f1-blue': '#00A0E9',
+        // Main palette
+        'bg-primary': '#0f1419',
+        'bg-secondary': '#1c2128', 
+        'bg-tertiary': '#262c36',
+        'border': '#373e47',
+        'text-primary': '#e6edf3',
+        'text-secondary': '#8d96a0',
+        'text-muted': '#656d76',
+        // Accent colors
+        'green': '#2ea043',
+        'orange': '#fb8500',
+        'red': '#da3633',
+        'blue': '#0969da',
+        'yellow': '#d29922',
       },
     },
   },

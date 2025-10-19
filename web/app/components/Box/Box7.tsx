@@ -7,7 +7,7 @@ interface BoxProps {
 }
 
 const baseClasses =
-  'relative flex h-full w-full flex-col overflow-hidden rounded-3xl border border-[#1b1d2d] bg-[#141725] p-6 text-[#f0f2ff] shadow-[0_18px_45px_rgba(0,0,0,0.45)]';
+  'relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border bg-bg-secondary text-text-primary shadow-lg shadow-black/20';
 
 const defaultLayout: CSSProperties = {
   gridColumn: '4 / span 6',
@@ -15,10 +15,8 @@ const defaultLayout: CSSProperties = {
 };
 
 const overlayStyle: CSSProperties = {
-  background:
-    'linear-gradient(155deg, rgba(255, 90, 71, 0.2), rgba(255, 216, 79, 0.16) 40%, rgba(20, 23, 37, 0.92) 75%, rgba(8, 10, 19, 0.96))',
+  display: "none",
 };
-
 export default function Box7({ className, style, children }: BoxProps) {
   const composedClassName = className ? `${baseClasses} ${className}` : baseClasses;
   const mergedStyle = style ? { ...defaultLayout, ...style } : defaultLayout;
@@ -27,9 +25,9 @@ export default function Box7({ className, style, children }: BoxProps) {
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
       {children ? (
-        <div className="relative z-[1] flex flex-1 flex-col">{children}</div>
+        <div className="relative z-[1] flex flex-1 flex-col p-6">{children}</div>
       ) : (
-        <span className="relative z-[1] text-xs font-semibold uppercase tracking-[0.28em] text-[#8c90a9]">
+        <span className="relative z-[1] p-6 text-xs font-semibold uppercase tracking-wider text-text-secondary">
           Box 7
         </span>
       )}
