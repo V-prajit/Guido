@@ -1,0 +1,58 @@
+{
+  "rules": [
+    {
+      "rule": "Aggressive Early Push",
+      "condition": "lap < 15 and position > 3",
+      "action": {
+        "deploy_straight": 85,
+        "deploy_corner": 70,
+        "harvest": 30
+      },
+      "confidence": 0.92,
+      "uplift_win_pct": 12.5,
+      "rationale": "Capitalizes on early race chaos to gain track position while tires are fresh.",
+      "caveats": "High tire degradation risk. May compromise late-race battery levels."
+    },
+    {
+      "rule": "Mid-Race Energy Conservation",
+      "condition": "lap >= 15 and lap < 40 and battery_soc > 50",
+      "action": {
+        "deploy_straight": 50,
+        "deploy_corner": 40,
+        "harvest": 75
+      },
+      "confidence": 0.88,
+      "uplift_win_pct": 8.2,
+      "rationale": "Builds an energy surplus during the stable mid-phase of the race for a powerful final stint.",
+      "caveats": "Vulnerable to attacks from cars on a more aggressive strategy."
+    },
+    {
+      "rule": "Low Battery Recovery Mode",
+      "condition": "battery_soc < 25",
+      "action": {
+        "deploy_straight": 30,
+        "deploy_corner": 20,
+        "harvest": 90
+      },
+      "confidence": 0.98,
+      "uplift_win_pct": 22.1,
+      "rationale": "Prioritizes energy harvesting to avoid critical battery depletion and significant lap time penalties.",
+      "caveats": "Results in very slow lap times; purely a defensive measure."
+    },
+    {
+      "rule": "Final Stint Attack",
+      "condition": "lap >= 45 and battery_soc > 40",
+      "action": {
+        "deploy_straight": 95,
+        "deploy_corner": 85,
+        "harvest": 20
+      },
+      "confidence": 0.85,
+      "uplift_win_pct": 15.8,
+      "rationale": "Deploys saved energy for a maximum attack in the closing laps when positions are being finalized.",
+      "caveats": "Requires having sufficient battery saved; ineffective if starting from a low SOC."
+    }
+  ],
+  "generated_at": "2025-10-18T14:30:00Z",
+  "num_simulations": 15000
+}
