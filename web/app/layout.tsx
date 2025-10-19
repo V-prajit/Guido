@@ -8,9 +8,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Strategy Gym 2026",
+  title: "Guido",
   description:
-    "Strategy Gym 2026 • F1-inspired analytics blending large-scale simulation, Gemini synthesis, and pit wall decision support.",
+    "Guido • F1-inspired analytics blending large-scale simulation, Gemini synthesis, and pit wall decision support.",
 };
 
 export default function RootLayout({
