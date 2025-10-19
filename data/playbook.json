@@ -1,0 +1,119 @@
+{
+  "rules": [
+    {
+      "condition": "battery_soc < 30 and lap > 40",
+      "rule": "Low Battery Late Race",
+      "action": {
+        "deploy_straight": 80,
+        "deploy_corner": 20,
+        "harvest": 90
+      },
+      "confidence": 0.85,
+      "rationale": "Conserve energy when battery is low in final laps"
+    },
+    {
+      "condition": "position <= 3 and rain == True",
+      "rule": "Podium Position Rain",
+      "action": {
+        "deploy_straight": 40,
+        "deploy_corner": 60,
+        "harvest": 70
+      },
+      "confidence": 0.75,
+      "rationale": "Balanced approach in wet conditions when in podium position"
+    },
+    {
+      "condition": "lap < 20 and position > 5",
+      "rule": "Early Race Aggression",
+      "action": {
+        "deploy_straight": 90,
+        "deploy_corner": 85,
+        "harvest": 30
+      },
+      "confidence": 0.7,
+      "rationale": "Push hard early to gain positions when battery is full"
+    },
+    {
+      "condition": "lap >= 20 and lap <= 40 and battery_soc > 50",
+      "rule": "Mid Race Conservation",
+      "action": {
+        "deploy_straight": 55,
+        "deploy_corner": 45,
+        "harvest": 65
+      },
+      "confidence": 0.8,
+      "rationale": "Maintain position while managing energy for final stint"
+    },
+    {
+      "condition": "position <= 2 and lap > 45 and battery_soc > 20",
+      "rule": "Leader Final Push",
+      "action": {
+        "deploy_straight": 95,
+        "deploy_corner": 90,
+        "harvest": 20
+      },
+      "confidence": 0.9,
+      "rationale": "Maximum attack when leading in final laps with sufficient energy"
+    }
+  ],
+  "generated_at": "2024-01-01T00:00:00Z",
+  "source_stats": {
+    "Opportunist": {
+      "wins": 17,
+      "avg_position": 3.58,
+      "avg_battery": 7.078469803760875,
+      "win_rate": 34.0,
+      "avg_lap_time": 92.86446174386205,
+      "total_races": 50
+    },
+    "Defensive": {
+      "wins": 6,
+      "avg_position": 4.38,
+      "avg_battery": 6.66202852314854,
+      "win_rate": 12.0,
+      "avg_lap_time": 93.96812556732131,
+      "total_races": 50
+    },
+    "Conservative": {
+      "wins": 12,
+      "avg_position": 2.1,
+      "avg_battery": 10.090465606759176,
+      "win_rate": 24.0,
+      "avg_lap_time": 91.40005537232356,
+      "total_races": 50
+    },
+    "Balanced": {
+      "wins": 0,
+      "avg_position": 3.82,
+      "avg_battery": 5.393928082481595,
+      "win_rate": 0.0,
+      "avg_lap_time": 93.25816719153862,
+      "total_races": 50
+    },
+    "Aggressive": {
+      "wins": 0,
+      "avg_position": 5.48,
+      "avg_battery": 5.0,
+      "win_rate": 0.0,
+      "avg_lap_time": 95.01260080437791,
+      "total_races": 50
+    },
+    "Risk_Taker": {
+      "wins": 6,
+      "avg_position": 4.44,
+      "avg_battery": 6.834995430974308,
+      "win_rate": 12.0,
+      "avg_lap_time": 93.8615711736113,
+      "total_races": 50
+    },
+    "Adaptive": {
+      "wins": 9,
+      "avg_position": 4.2,
+      "avg_battery": 6.500469475096891,
+      "win_rate": 18.0,
+      "avg_lap_time": 93.72169739708568,
+      "total_races": 50
+    }
+  },
+  "total_rules": 5
+}
