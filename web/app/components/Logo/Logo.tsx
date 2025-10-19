@@ -13,16 +13,25 @@ export default function Logo() {
 
   const textStyle: CSSProperties = {
     fontSize: '3.5rem',
-    fontWeight: 'bold',
-    fontFamily: 'serif',
-    color: '#FFD700',
+    fontWeight: 900,
+    fontFamily: "'Orbitron', sans-serif",
+    color: '#e6edf3',
     textShadow: '0px 0px 10px rgba(0,0,0,0.2)',
-    textDecoration: 'underline',
   };
 
   return (
     <div style={logoStyle}>
-      <h1 style={textStyle}>Guido🏎️</h1>
+      <h1 style={{...textStyle, display: 'flex', alignItems: 'center' }}>
+        Guido
+        <img
+          src="/guido.png"
+          alt="Guido"
+          style={{
+            height: '3.5rem',
+            marginLeft: '0.5rem',
+          }}
+        />
+      </h1>
     </div>
   );
 }
