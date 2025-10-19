@@ -275,6 +275,9 @@ const GameController: React.FC<GameControllerProps> = ({
                   tireLife={playerState.tire_life}
                   fuelRemaining={playerState.fuel_remaining}
                   lapTime={playerState.lap_time}
+                  speed={playerState.speed}
+                  energyDeployment={(playerState as any).energy_deployment}
+                  tireManagement={(playerState as any).tire_management}
                   isRaining={isRaining}
                   safetyCarActive={safetyCarActive}
                 />

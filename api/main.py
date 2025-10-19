@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import os
 import asyncio
 import multiprocessing as mp
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from dotenv import load_dotenv
 import time
 import glob
@@ -16,6 +16,9 @@ load_dotenv()
 MP_CTX = mp.get_context("spawn")
 MAX_WORKERS = int(os.getenv("MAX_WORKERS") or min(mp.cpu_count(), 8))
 EXECUTOR = ProcessPoolExecutor(max_workers=MAX_WORKERS, mp_context=MP_CTX)
+
+# Thread pool for I/O-bound tasks (e.g., pre-computing decisions with Gemini API)
+THREAD_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 
 app = FastAPI(title="Strategy Gym 2026")
 
@@ -465,6 +468,7 @@ async def game_websocket(websocket: WebSocket, session_id: str):
 
     game_state: GameState = None
     orchestrator: GameLoopOrchestrator = None
+    race_task: asyncio.Task = None  # Track background race loop
 
     try:
         while True:
@@ -517,8 +521,11 @@ async def game_websocket(websocket: WebSocket, session_id: str):
                     'opponents': [asdict(opp) for opp in game_state.opponents]
                 })
 
-                # Start auto-advancing laps
-                await run_race_loop(websocket, orchestrator, game_state)
+                # CRITICAL FIX: Start race loop as background task (non-blocking)
+                # This allows WebSocket to continue processing SELECT_STRATEGY messages
+                print(f"[{session_id}] Starting race loop in background...")
+                race_task = asyncio.create_task(run_race_loop(websocket, orchestrator, game_state))
+                print(f"[{session_id}] ✓ Race loop running in background")
 
             # ==========================================
             # SELECT STRATEGY
@@ -532,6 +539,7 @@ async def game_websocket(websocket: WebSocket, session_id: str):
                     continue
 
                 strategy_id = data.get('strategy_id', 0)
+                print(f"[SELECT_STRATEGY] Received strategy selection: {strategy_id}")
 
                 # Apply chosen strategy
                 success = orchestrator.apply_strategy_choice(strategy_id)
@@ -548,7 +556,9 @@ async def game_websocket(websocket: WebSocket, session_id: str):
 
                     # Resume race loop by setting the pause_event
                     # This will unblock the await pause_event.wait() in run_race_loop
+                    print(f"[SELECT_STRATEGY] Setting pause_event to resume race loop")
                     game_state.pause_event.set()
+                    print(f"[SELECT_STRATEGY] ✓ Race loop resumed")
                 else:
                     await websocket.send_json({
                         'type': 'ERROR',
@@ -558,6 +568,9 @@ async def game_websocket(websocket: WebSocket, session_id: str):
     except WebSocketDisconnect:
         # Cleanup session on disconnect
         print(f"✓ Client disconnected: {session_id}")
+        if race_task and not race_task.done():
+            print(f"[CLEANUP] Cancelling background race loop")
+            race_task.cancel()
         if game_state:
             session_manager.delete_session(game_state.session_id)
     except Exception as e:
@@ -571,6 +584,137 @@ async def game_websocket(websocket: WebSocket, session_id: str):
             })
         except:
             pass
+
+
+def generate_heuristic_recommendations(current_state, event_type: str) -> dict:
+    """
+    Generate instant heuristic recommendations without running simulations.
+    Used as fallback when pre-computation isn't ready (NEVER block the game!)
+
+    Returns basic strategy recommendations based on simple rules.
+    """
+    from sim.quick_sim import RaceState
+
+    # Generate 3 strategies based on event type
+    if event_type == 'RAIN_START':
+        # Rain: Aggressive = risky, Balanced = safe, Conservative = very safe
+        strategies = [
+            {
+                'strategy_id': 0,
+                'strategy_name': 'Aggressive',
+                'win_rate': 25.0,
+                'avg_position': 3.5,
+                'rationale': 'High risk in rain. Push hard with electric power but tires will wear fast.',
+                'confidence': 0.6,
+                'strategy_params': {
+                    'energy_deployment': 85,
+                    'tire_management': 50,
+                    'fuel_strategy': 55,
+                    'ers_mode': 80,
+                    'overtake_aggression': 85,
+                    'defense_intensity': 60
+                }
+            },
+            {
+                'strategy_id': 1,
+                'strategy_name': 'Balanced',
+                'win_rate': 45.0,
+                'avg_position': 2.5,
+                'rationale': 'Moderate pace with careful tire management. Best overall approach in rain.',
+                'confidence': 0.8,
+                'strategy_params': {
+                    'energy_deployment': 60,
+                    'tire_management': 75,
+                    'fuel_strategy': 70,
+                    'ers_mode': 65,
+                    'overtake_aggression': 55,
+                    'defense_intensity': 65
+                }
+            },
+            {
+                'strategy_id': 2,
+                'strategy_name': 'Conservative',
+                'win_rate': 15.0,
+                'avg_position': 4.5,
+                'rationale': 'Very safe but slow. Risk dropping positions to faster cars.',
+                'confidence': 0.7,
+                'strategy_params': {
+                    'energy_deployment': 35,
+                    'tire_management': 90,
+                    'fuel_strategy': 85,
+                    'ers_mode': 50,
+                    'overtake_aggression': 30,
+                    'defense_intensity': 70
+                }
+            }
+        ]
+
+        return {
+            'recommended': [strategies[1], strategies[0]],  # Balanced, then Aggressive
+            'avoid': strategies[2],  # Conservative
+            'latency_ms': 0,
+            'used_fallback': True
+        }
+
+    else:
+        # Generic fallback for other events
+        strategies = [
+            {
+                'strategy_id': 0,
+                'strategy_name': 'Aggressive',
+                'win_rate': 30.0,
+                'avg_position': 3.0,
+                'rationale': 'High risk, high reward. Push limits for potential gain.',
+                'confidence': 0.65,
+                'strategy_params': {
+                    'energy_deployment': 85,
+                    'tire_management': 55,
+                    'fuel_strategy': 50,
+                    'ers_mode': 80,
+                    'overtake_aggression': 80,
+                    'defense_intensity': 60
+                }
+            },
+            {
+                'strategy_id': 1,
+                'strategy_name': 'Balanced',
+                'win_rate': 40.0,
+                'avg_position': 2.5,
+                'rationale': 'Steady approach balancing speed and resource management.',
+                'confidence': 0.75,
+                'strategy_params': {
+                    'energy_deployment': 65,
+                    'tire_management': 70,
+                    'fuel_strategy': 65,
+                    'ers_mode': 65,
+                    'overtake_aggression': 60,
+                    'defense_intensity': 65
+                }
+            },
+            {
+                'strategy_id': 2,
+                'strategy_name': 'Conservative',
+                'win_rate': 20.0,
+                'avg_position': 4.0,
+                'rationale': 'Safe finish guaranteed but may lose positions.',
+                'confidence': 0.7,
+                'strategy_params': {
+                    'energy_deployment': 40,
+                    'tire_management': 85,
+                    'fuel_strategy': 80,
+                    'ers_mode': 55,
+                    'overtake_aggression': 35,
+                    'defense_intensity': 70
+                }
+            }
+        ]
+
+        return {
+            'recommended': [strategies[1], strategies[0]],
+            'avoid': strategies[2],
+            'latency_ms': 0,
+            'used_fallback': True
+        }
 
 
 async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator, game_state: GameState):
@@ -613,168 +757,207 @@ async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator
         for racer in all_racers:
             cumulative_baselines[id(racer)] = racer.cumulative_time
 
-    while not game_state.is_complete and not game_state.is_paused:
-        # Measure real elapsed time using monotonic clock
-        now = time.perf_counter()
-        dt = now - last
-        last = now
+    # GRACEFUL SHUTDOWN: Wrap race loop in try-except to handle cancellation
+    try:
+        while not game_state.is_complete and not game_state.is_paused:
+            # Measure real elapsed time using monotonic clock
+            now = time.perf_counter()
+            dt = now - last
+            last = now
 
-        # Pause handling: freeze simulation time when paused
-        if not game_state.pause_event.is_set():
-            await asyncio.sleep(0.02)  # Small sleep while paused
-            continue
+            # Pause handling: freeze simulation time when paused
+            if not game_state.pause_event.is_set():
+                await asyncio.sleep(0.02)  # Small sleep while paused
+                continue
 
-        # Accumulate time
-        lap_accum += dt
-        update_accum += dt
-
-        # ==========================================
-        # SMOOTH VISUALIZATION: Update lap_progress AND speed
-        # Each racer advances from their baseline + elapsed lap time
-        # ==========================================
-        all_racers = [game_state.player] + game_state.opponents
-        for racer in all_racers:
-            racer_id = id(racer)
-            baseline = cumulative_baselines.get(racer_id, racer.cumulative_time)
-
-            # Per-car speed multiplier (faster cars move faster in visualization)
-            # Use last lap time to estimate current pace
-            if hasattr(racer, 'lap_time') and racer.lap_time > 0:
-                expected_lap_time = racer.lap_time
-            elif hasattr(racer, 'last_lap_time') and racer.last_lap_time > 0:
-                expected_lap_time = racer.last_lap_time
-            else:
-                expected_lap_time = LAP_TIME_DEMO
-
-            # Speed factor: how fast this car is relative to demo lap time
-            # Faster cars (lower lap_time) get speed_factor > 1.0
-            speed_factor = LAP_TIME_DEMO / max(0.1, expected_lap_time)
-
-            # Estimate current cumulative time (baseline + scaled elapsed time)
-            estimated_cumulative = baseline + (lap_accum * speed_factor)
-
-            # Calculate lap_progress from estimated cumulative time
-            # This gives smooth per-car movement based on individual pace
-            car_fractional_laps = estimated_cumulative / LAP_TIME_DEMO
-            racer.lap_progress = min(0.999, float(car_fractional_laps - int(car_fractional_laps)))
+            # Accumulate time
+            lap_accum += dt
+            update_accum += dt
 
             # ==========================================
-            # DYNAMIC SPEED CALCULATION (every 100ms)
-            # Uses lap_progress + strategy to show realistic F1 speed variation
+            # SMOOTH VISUALIZATION: Update lap_progress AND speed
+            # Each racer advances from their baseline + elapsed lap time
             # ==========================================
-            if hasattr(racer, 'energy_deployment'):
-                # Player: use actual strategy params
-                racer.speed = calculate_realistic_speed(
-                    lap_progress=racer.lap_progress,
-                    energy_deployment=racer.energy_deployment,
-                    tire_management=racer.tire_management,
-                    battery_soc=racer.battery_soc
-                )
-            else:
-                # Opponent: use agent-specific strategy defaults
-                energy, tire_mgmt = get_opponent_strategy_params(racer.agent_type)
-                racer.speed = calculate_realistic_speed(
-                    lap_progress=racer.lap_progress,
-                    energy_deployment=energy,
-                    tire_management=tire_mgmt,
-                    battery_soc=racer.battery_soc
-                )
-
-        # Only advance lap when enough time has passed (~18s)
-        if lap_accum >= LAP_TIME_DEMO:
-            lap_result = orchestrator.advance_lap()
-            lap_accum = 0.0  # Reset lap timer
-
-            # Update cumulative time baselines with NEW authoritative values
+            all_racers = [game_state.player] + game_state.opponents
             for racer in all_racers:
-                cumulative_baselines[id(racer)] = racer.cumulative_time
+                racer_id = id(racer)
+                baseline = cumulative_baselines.get(racer_id, racer.cumulative_time)
 
-            # Update session
-            session_manager.update_session(game_state.session_id, game_state)
+                # Per-car speed multiplier (faster cars move faster in visualization)
+                # Use last lap time to estimate current pace
+                if hasattr(racer, 'lap_time') and racer.lap_time > 0:
+                    expected_lap_time = racer.lap_time
+                elif hasattr(racer, 'last_lap_time') and racer.last_lap_time > 0:
+                    expected_lap_time = racer.last_lap_time
+                else:
+                    expected_lap_time = LAP_TIME_DEMO
 
-            # Check if race is complete
-            if lap_result.get('race_complete'):
+                # Speed factor: how fast this car is relative to demo lap time
+                # Faster cars (lower lap_time) get speed_factor > 1.0
+                speed_factor = LAP_TIME_DEMO / max(0.1, expected_lap_time)
+
+                # Estimate current cumulative time (baseline + scaled elapsed time)
+                estimated_cumulative = baseline + (lap_accum * speed_factor)
+
+                # Calculate lap_progress from estimated cumulative time
+                # This gives smooth per-car movement based on individual pace
+                car_fractional_laps = estimated_cumulative / LAP_TIME_DEMO
+                racer.lap_progress = min(0.999, float(car_fractional_laps - int(car_fractional_laps)))
+
+                # ==========================================
+                # DYNAMIC SPEED CALCULATION (every 100ms)
+                # Uses lap_progress + strategy to show realistic F1 speed variation
+                # ==========================================
+                if hasattr(racer, 'energy_deployment'):
+                    # Player: use actual strategy params
+                    racer.speed = calculate_realistic_speed(
+                        lap_progress=racer.lap_progress,
+                        energy_deployment=racer.energy_deployment,
+                        tire_management=racer.tire_management,
+                        battery_soc=racer.battery_soc
+                    )
+                else:
+                    # Opponent: use agent-specific strategy defaults
+                    energy, tire_mgmt = get_opponent_strategy_params(racer.agent_type)
+                    racer.speed = calculate_realistic_speed(
+                        lap_progress=racer.lap_progress,
+                        energy_deployment=energy,
+                        tire_management=tire_mgmt,
+                        battery_soc=racer.battery_soc
+                    )
+
+            # Only advance lap when enough time has passed (~18s)
+            if lap_accum >= LAP_TIME_DEMO:
+                lap_result = orchestrator.advance_lap()
+                lap_accum = 0.0  # Reset lap timer
+
+                # Update cumulative time baselines with NEW authoritative values
+                for racer in all_racers:
+                    cumulative_baselines[id(racer)] = racer.cumulative_time
+
+                # Update session
+                session_manager.update_session(game_state.session_id, game_state)
+
+                # DEMO OPTIMIZATION: Pre-compute rain decision on lap 2 for instant lap 3 display
+                if game_state.current_lap == 2 and not orchestrator.pre_compute_started:
+                    print("[DEMO] Lap 2 complete - triggering pre-computation for rain decision")
+                    orchestrator.pre_compute_started = True
+                    # Run pre-computation in SEPARATE THREAD (truly non-blocking)
+                    # This prevents the event loop from blocking during CPU-intensive simulations
+                    loop = asyncio.get_event_loop()
+                    loop.run_in_executor(THREAD_EXECUTOR, orchestrator.pre_compute_rain_decision)
+
+                # Check if race is complete
+                if lap_result.get('race_complete'):
+                    await websocket.send_json({
+                        'type': 'RACE_COMPLETE',
+                        'final_position': lap_result['final_position'],
+                        'player': asdict(game_state.player),
+                        'opponents': [asdict(opp) for opp in game_state.opponents],
+                        'decision_count': len(game_state.decision_history),
+                        'race_summary': {
+                            'total_laps': game_state.total_laps,
+                            'decisions_made': len(game_state.decision_history)
+                        }
+                    })
+                    break
+
+            # Send state updates at 10 Hz (independent of lap advancement)
+            if update_accum >= UPDATE_INTERVAL:
+                update_accum = 0.0
+
+                # Send lap update to client (includes speed, gap_to_leader, lap_progress from game_loop)
                 await websocket.send_json({
-                    'type': 'RACE_COMPLETE',
-                    'final_position': lap_result['final_position'],
+                    'type': 'LAP_UPDATE',
+                    'lap': game_state.current_lap,
                     'player': asdict(game_state.player),
                     'opponents': [asdict(opp) for opp in game_state.opponents],
-                    'decision_count': len(game_state.decision_history),
-                    'race_summary': {
-                        'total_laps': game_state.total_laps,
-                        'decisions_made': len(game_state.decision_history)
-                    }
+                    'is_raining': game_state.is_raining,
+                    'safety_car_active': game_state.safety_car_active,
+                    'server_timestamp': now  # For frontend interpolation sync
                 })
-                break
 
-        # Send state updates at 10 Hz (independent of lap advancement)
-        if update_accum >= UPDATE_INTERVAL:
-            update_accum = 0.0
+                # Debug logging (once per second)
+                if int(now) != int(last + dt):  # New second boundary
+                    print(f"[RACE] Lap {game_state.current_lap}/{game_state.total_laps}, "
+                          f"lap_accum={lap_accum:.2f}s, "
+                          f"player cumulative={game_state.player.cumulative_time:.2f}s, "
+                          f"pos=P{game_state.player.position}")
 
-            # Send lap update to client (includes speed, gap_to_leader, lap_progress from game_loop)
-            await websocket.send_json({
-                'type': 'LAP_UPDATE',
-                'lap': game_state.current_lap,
-                'player': asdict(game_state.player),
-                'opponents': [asdict(opp) for opp in game_state.opponents],
-                'is_raining': game_state.is_raining,
-                'safety_car_active': game_state.safety_car_active,
-                'server_timestamp': now  # For frontend interpolation sync
-            })
+            # Check for decision points
+            decision_check = orchestrator.check_for_decision_point()
 
-            # Debug logging (once per second)
-            if int(now) != int(last + dt):  # New second boundary
-                print(f"[RACE] Lap {game_state.current_lap}/{game_state.total_laps}, "
-                      f"lap_accum={lap_accum:.2f}s, "
-                      f"player cumulative={game_state.player.cumulative_time:.2f}s, "
-                      f"pos=P{game_state.player.position}")
+            if decision_check.get('triggered'):
+                # Get recommendations from GameAdvisor
+                event_type = decision_check['event_type']
+                current_state = decision_check['state']
 
-        # Check for decision points
-        decision_check = orchestrator.check_for_decision_point()
+                # DEMO OPTIMIZATION: Use pre-computed decision for rain on lap 3
+                if event_type == 'RAIN_START' and orchestrator.pre_computed_decision is not None:
+                    print("[DEMO] ✓ Using pre-computed rain decision (instant response!)")
+                    recommendations = orchestrator.pre_computed_decision
+                    # Mark latency as near-zero for pre-computed result
+                    recommendations['latency_ms'] = recommendations.get('latency_ms', 0)
+                    recommendations['pre_computed'] = True
+                else:
+                    # CRITICAL FIX: Use instant heuristic fallback (NEVER block the game!)
+                    print(f"[DEMO] Pre-computation not ready, using instant heuristic fallback for {event_type}")
+                    recommendations = generate_heuristic_recommendations(current_state, event_type)
+                    recommendations['pre_computed'] = False
+                    print(f"[DEMO] ✓ Instant fallback recommendations generated (0ms latency)")
 
-        if decision_check.get('triggered'):
-            # Get recommendations from GameAdvisor
-            event_type = decision_check['event_type']
-            current_state = decision_check['state']
+                # Send decision point to client
+                await websocket.send_json({
+                    'type': 'DECISION_POINT',
+                    'event_type': event_type,
+                    'lap': current_state.lap,
+                    'position': current_state.position,
+                    'battery_soc': current_state.battery_soc,
+                    'tire_life': current_state.tire_life,
+                    'fuel_remaining': current_state.fuel_remaining,
+                    'recommended': recommendations['recommended'],
+                    'avoid': recommendations.get('avoid'),
+                    'latency_ms': recommendations.get('latency_ms', 0),
+                    'used_fallback': recommendations.get('used_fallback', False),
+                    'pre_computed': recommendations.get('pre_computed', False)
+                })
 
-            # Run quick sims + Gemini analysis
-            recommendations = await orchestrator.get_decision_recommendations(
-                event_type=event_type,
-                current_state=current_state
-            )
+                # Store decision point
+                game_state.current_decision_point = {
+                    'event_type': event_type,
+                    'recommendations': recommendations
+                }
 
-            # Send decision point to client
-            await websocket.send_json({
-                'type': 'DECISION_POINT',
-                'event_type': event_type,
-                'lap': current_state.lap,
-                'position': current_state.position,
-                'battery_soc': current_state.battery_soc,
-                'tire_life': current_state.tire_life,
-                'fuel_remaining': current_state.fuel_remaining,
-                'recommended': recommendations['recommended'],
-                'avoid': recommendations.get('avoid'),
-                'latency_ms': recommendations.get('latency_ms', 0),
-                'used_fallback': recommendations.get('used_fallback', False)
-            })
+                # Pause race loop and wait for player to select strategy
+                game_state.pause_event.clear()
+                print(f"[RACE_LOOP] Paused race, waiting for player to select strategy...")
 
-            # Store decision point
-            game_state.current_decision_point = {
-                'event_type': event_type,
-                'recommendations': recommendations
-            }
+                # Wait for SELECT_STRATEGY to set the event (with 5 min timeout)
+                try:
+                    await asyncio.wait_for(game_state.pause_event.wait(), timeout=300.0)
+                    print(f"[RACE_LOOP] ✓ Player selected strategy, resuming race...")
+                except asyncio.TimeoutError:
+                    # Timeout - auto-select balanced strategy
+                    print(f"[RACE_LOOP] ⚠️ Decision timeout (5min) - auto-selecting balanced strategy")
+                    orchestrator.apply_strategy_choice(1)  # Auto-select balanced (strategy_id=1)
+                    game_state.pause_event.set()
 
-            # Pause race loop and wait for player to select strategy
-            game_state.pause_event.clear()
+                # Reset monotonic clock baseline after pause to prevent dt spike
+                last = time.perf_counter()
 
-            # Wait for SELECT_STRATEGY to set the event (non-blocking)
-            await game_state.pause_event.wait()
+            # Cooperative yield to event loop
+            await asyncio.sleep(0.002)
 
-            # Reset monotonic clock baseline after pause to prevent dt spike
-            last = time.perf_counter()
-
-        # Cooperative yield to event loop
-        await asyncio.sleep(0.002)
+    except asyncio.CancelledError:
+        # Task was cancelled (server shutdown or client disconnect)
+        print("[RACE_LOOP] Task cancelled - server shutdown or client disconnect")
+        raise  # Re-raise to properly propagate cancellation
+    except Exception as e:
+        # Unexpected error in race loop
+        print(f"[RACE_LOOP] Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 if __name__ == "__main__":

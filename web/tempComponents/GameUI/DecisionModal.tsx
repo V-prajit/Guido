@@ -134,6 +134,45 @@ const DecisionModal: React.FC<DecisionModalProps> = ({
     return titles[type] || '⚠️ DECISION POINT';
   };
 
+  // Get risk level indicator based on strategy parameters
+  const getRiskIndicator = (params: StrategyParams): { label: string; color: string; description: string } => {
+    const { energy_deployment, tire_management, fuel_strategy } = params;
+
+    // High risk: aggressive energy + poor tire/fuel management
+    if (energy_deployment > 80 || (tire_management < 50 && fuel_strategy < 50)) {
+      return {
+        label: "🔴 HIGH RISK",
+        color: "bg-red-500",
+        description: "High Speed • High Degradation"
+      };
+    }
+
+    // Conservative: low energy + careful management
+    if (energy_deployment < 40 && tire_management > 75 && fuel_strategy > 75) {
+      return {
+        label: "🟢 LOW RISK",
+        color: "bg-green-500",
+        description: "Safe Finish • Conservative"
+      };
+    }
+
+    // Balanced
+    return {
+      label: "🟡 MODERATE RISK",
+      color: "bg-yellow-500",
+      description: "Balanced Approach • Steady Pace"
+    };
+  };
+
+  // Get predicted impact based on strategy
+  const getPredictedImpact = (params: StrategyParams): string => {
+    const { energy_deployment, tire_management } = params;
+    const speedChange = energy_deployment > 70 ? "+15-20 km/h" : energy_deployment < 40 ? "-10-15 km/h" : "+5-10 km/h";
+    const tireWear = tire_management < 50 ? "+100% wear" : tire_management < 70 ? "+40% wear" : "+20% wear";
+
+    return `Speed: ${speedChange} • Tire Wear: ${tireWear}`;
+  };
+
   // All 3 strategies (recommended + avoid)
   const allStrategies = [
     ...(recommended || []),
@@ -206,6 +245,9 @@ const DecisionModal: React.FC<DecisionModalProps> = ({
                   ? "bg-blue-50"
                   : "bg-white";
 
+                const riskIndicator = getRiskIndicator(strategy.strategy_params);
+                const predictedImpact = getPredictedImpact(strategy.strategy_params);
+
                 return (
                   <motion.button
                     key={strategy.strategy_id}
@@ -233,12 +275,28 @@ const DecisionModal: React.FC<DecisionModalProps> = ({
                       )}
                     </div>
 
+                    {/* Risk Indicator Badge */}
+                    <div className="mb-3">
+                      <div className={`inline-flex items-center px-3 py-1 ${riskIndicator.color} text-white text-xs font-bold rounded-full`}>
+                        {riskIndicator.label}
+                      </div>
+                      <div className="text-xs text-gray-600 mt-1">
+                        {riskIndicator.description}
+                      </div>
+                    </div>
+
                     {/* Win Rate */}
                     <div className="mb-4">
                       <div className="text-4xl font-bold text-black">
                         {strategy.win_rate.toFixed(1)}%
                       </div>
                       <div className="text-sm text-gray-600">Win Rate</div>
+                    </div>
+
+                    {/* Predicted Impact */}
+                    <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded">
+                      <div className="text-xs font-bold text-blue-700 mb-1">📊 PREDICTED IMPACT</div>
+                      <div className="text-xs text-blue-600">{predictedImpact}</div>
                     </div>
 
                     {/* Rationale */}

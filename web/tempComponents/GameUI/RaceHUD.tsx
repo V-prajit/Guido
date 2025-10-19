@@ -17,6 +17,9 @@ interface RaceHUDProps {
   tireLife: number;
   fuelRemaining: number;
   lapTime?: number;
+  speed?: number;  // Current speed in km/h
+  energyDeployment?: number;  // 0-100
+  tireManagement?: number;    // 0-100
   gapAhead?: string;
   gapBehind?: string;
   isRaining?: boolean;
@@ -31,6 +34,9 @@ const RaceHUD: React.FC<RaceHUDProps> = ({
   tireLife,
   fuelRemaining,
   lapTime,
+  speed,
+  energyDeployment = 60,
+  tireManagement = 70,
   gapAhead,
   gapBehind,
   isRaining,
@@ -53,6 +59,19 @@ const RaceHUD: React.FC<RaceHUDProps> = ({
     if (level > 30) return "bg-green-500";
     if (level > 15) return "bg-yellow-500";
     return "bg-red-500";
+  };
+
+  // Strategy indicators (DEMO FEATURE)
+  const getBatteryDrainRate = (energy: number): string => {
+    if (energy > 80) return "⚡ High Drain";
+    if (energy > 50) return "⚡ Med Drain";
+    return "⚡ Low Drain";
+  };
+
+  const getTireWearRate = (tireMgmt: number): string => {
+    if (tireMgmt < 50) return "🔴 High Wear";
+    if (tireMgmt < 70) return "🟡 Med Wear";
+    return "🟢 Low Wear";
   };
 
   return (
@@ -91,12 +110,21 @@ const RaceHUD: React.FC<RaceHUDProps> = ({
           </div>
         </div>
 
-        {/* Lap Time */}
+        {/* Speed */}
         <div className="text-center">
-          <div className="text-xs text-gray-600 mb-1">LAP TIME</div>
-          <div className="text-2xl font-mono font-bold">
-            {lapTime ? `${lapTime.toFixed(3)}s` : '--:--'}
+          <div className="text-xs text-gray-600 mb-1">SPEED</div>
+          <div className="text-3xl font-mono font-bold">
+            {speed ? `${speed.toFixed(0)}` : '---'}
+            <span className="text-sm text-gray-400"> km/h</span>
           </div>
+        </div>
+      </div>
+
+      {/* Lap Time Row */}
+      <div className="text-center mb-4 p-2 bg-gray-100 rounded">
+        <div className="text-xs text-gray-600 mb-1">LAP TIME</div>
+        <div className="text-2xl font-mono font-bold">
+          {lapTime ? `${lapTime.toFixed(3)}s` : '--:--'}
         </div>
       </div>
 
@@ -118,12 +146,17 @@ const RaceHUD: React.FC<RaceHUDProps> = ({
         </div>
       )}
 
-      {/* Resource Gauges */}
+      {/* Resource Gauges with Strategy Indicators */}
       <div className="space-y-3">
-        {/* Battery */}
+        {/* Battery with Drain Rate */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold text-gray-700">⚡ BATTERY</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-700">⚡ BATTERY</span>
+              <span className="text-[9px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                {getBatteryDrainRate(energyDeployment)}
+              </span>
+            </div>
             <span className="text-xs font-mono font-bold">{batterySOC.toFixed(1)}%</span>
           </div>
           <div className="h-4 bg-gray-200 rounded-full overflow-hidden border-2 border-black">
@@ -136,10 +169,15 @@ const RaceHUD: React.FC<RaceHUDProps> = ({
           </div>
         </div>
 
-        {/* Tire Life */}
+        {/* Tire Life with Wear Rate */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-bold text-gray-700">🛞 TIRES</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-700">🛞 TIRES</span>
+              <span className="text-[9px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                {getTireWearRate(tireManagement)}
+              </span>
+            </div>
             <span className="text-xs font-mono font-bold">{tireLife.toFixed(1)}%</span>
           </div>
           <div className="h-4 bg-gray-200 rounded-full overflow-hidden border-2 border-black">
