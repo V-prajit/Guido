@@ -60,6 +60,10 @@ class RecommendRequest(BaseModel):
     battery_soc: float
     position: int
     rain: bool = False
+    tire_age: int = 0
+    tire_life: float = 100.0
+    fuel_remaining: float = 100.0
+    boost_used: int = 0
 
 class RecommendResponse(BaseModel):
     recommendations: list
@@ -155,7 +159,11 @@ async def recommend(req: RecommendRequest):
         'lap': req.lap,
         'battery_soc': req.battery_soc,
         'position': req.position,
-        'rain': req.rain
+        'rain': req.rain,
+        'tire_age': req.tire_age,
+        'tire_life': req.tire_life,
+        'fuel_remaining': req.fuel_remaining,
+        'boost_used': req.boost_used
     }
     
     recommendations, conditions_evaluated, seed = get_recommendations_fast(state)

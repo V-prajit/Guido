@@ -1,0 +1,50 @@
+{
+  "timestamp": "2025-10-19T00:39:32.814574",
+  "num_scenarios": 100,
+  "targets": {
+    "simulation_time": 15.0,
+    "recommendation_latency_p95": 1.5,
+    "adaptive_win_rate": 60.0
+  },
+  "results": {
+    "scenario_generation": {
+      "time_seconds": 0.003,
+      "scenarios_per_sec": 35827.3,
+      "passed": true
+    },
+    "simulation": {
+      "time_seconds": 0.52,
+      "scenarios_per_sec": 193.41,
+      "extrapolated_1000_scenarios": 5.17,
+      "target_met": true,
+      "total_simulations": 45600
+    },
+    "analysis": {
+      "time_seconds": 0.062,
+      "metrics_generated": 8,
+      "passed": true
+    },
+    "recommendations": {
+      "queries_tested": 100,
+      "avg_latency_ms": 0.14,
+      "p50_latency_ms": 0.13,
+      "p95_latency_ms": 0.15,
+      "p99_latency_ms": 0.19,
+      "target_met_p95": true
+    },
+    "adaptive_ai": {
+      "wins": 100,
+      "win_rate_pct": 100.0,
+      "baseline_median": 0,
+      "baseline_rate_pct": 0.0,
+      "beats_baseline": true,
+      "target_met": true
+    },
+    "physics_comparison": {
+      "2024_avg_lap_time": 96.49,
+      "2026_avg_lap_time": 94.2,
+      "time_difference_seconds": 2.29,
+      "pct_improvement": 2.4
+    }
+  }
+}

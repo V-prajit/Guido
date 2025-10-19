@@ -1,0 +1,37 @@
+{
+  "tire_compounds": {
+    "SOFT": {
+      "base_time": 98.4,
+      "deg_rate": 0.01
+    },
+    "HARD": {
+      "base_time": 96.66,
+      "deg_rate": 0.022
+    }
+  },
+  "fuel_effect": {
+    "penalty_per_kg": 0.026,
+    "consumption_per_lap": 1.8,
+    "starting_fuel": 110
+  },
+  "ers_deployment": {
+    "avg_per_lap": 4.0,
+    "max_per_lap": 4.0,
+    "speed_benefit_per_mj": 0.3
+  },
+  "track_characteristics": {
+    "base_lap_time": 96.8,
+    "drs_gain": 0.3,
+    "slipstream_gain": 0.2,
+    "overtaking_difficulty": "medium",
+    "temperature_range": [
+      17.6,
+      18.9
+    ]
+  },
+  "race_info": {
+    "num_laps": 57,
+    "track_name": "Bahrain International Circuit",
+    "date": "2024-03-02"
+  }
+}

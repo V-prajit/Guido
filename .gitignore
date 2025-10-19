@@ -33,10 +33,41 @@ ENV/
 # macOS
 .DS_Store
 
+# FastF1 cache (large downloaded telemetry data)
+cache/
+
+# Large CSV files from simulations
+data/*.csv
+data/full_scale_*.csv
+data/temp_*.csv
+data/*_benchmark_*.csv
+
+# Keep small important JSON files (explicitly not ignored)
+!data/baseline_2024.json
+!data/learned_strategies.json
+!data/playbook.json
+!data/validation_2024.json
+!data/comprehensive_benchmark.json
+!data/playbook_test.json
+!data/perf.json
+!data/lookup.json
+!data/validation.json
+
+# Test output files
+test_*.py.log
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
 # Generated data (keep structure, ignore contents)
-# Uncomment if you don't want to commit run data
-# runs/*.csv
-# runs/*.json
-# data/playbook.json
+runs/*.csv
+runs/*.json
 /sim/__pycache__
 /api/__pycache__

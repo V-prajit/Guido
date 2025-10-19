@@ -1,0 +1,60 @@
+{
+  "verstappen_2024": {
+    "energy_deployment": 29.5,
+    "tire_management": 100,
+    "fuel_strategy": 52.9,
+    "ers_mode": 35.4,
+    "overtake_aggression": 40,
+    "defense_intensity": 100,
+    "analysis": {
+      "laps_analyzed": 57,
+      "final_position": 1,
+      "avg_lap_time": 95.84,
+      "tire_stints": [
+        "SOFT-17",
+        "HARD-20",
+        "SOFT-20"
+      ],
+      "overtakes_made": 0,
+      "overtakes_defended": 0
+    }
+  },
+  "hamilton_2024": {
+    "energy_deployment": 27.5,
+    "tire_management": 100,
+    "fuel_strategy": 51.9,
+    "ers_mode": 30.9,
+    "overtake_aggression": 100,
+    "defense_intensity": 96.4,
+    "analysis": {
+      "laps_analyzed": 57,
+      "final_position": 7,
+      "avg_lap_time": 96.66,
+      "tire_stints": [
+        "SOFT-12",
+        "HARD-45"
+      ],
+      "overtakes_made": 8,
+      "overtakes_defended": 2
+    }
+  },
+  "alonso_2024": {
+    "energy_deployment": 25.7,
+    "tire_management": 100,
+    "fuel_strategy": 53.8,
+    "ers_mode": 30.5,
+    "overtake_aggression": 100,
+    "defense_intensity": 85.7,
+    "analysis": {
+      "laps_analyzed": 57,
+      "final_position": 9,
+      "avg_lap_time": 97.18,
+      "tire_stints": [
+        "SOFT-15",
+        "HARD-42"
+      ],
+      "overtakes_made": 10,
+      "overtakes_defended": 8
+    }
+  }
+}

@@ -66,9 +66,12 @@ def get_recommendations_fast(state: dict):
         recommendations = [{
             'rule': 'Balanced Default',
             'action': {
-                'deploy_straight': 60, 
-                'deploy_corner': 50, 
-                'harvest': 50
+                'energy_deployment': 70,
+                'tire_management': 65,
+                'fuel_strategy': 55,
+                'ers_mode': 60,
+                'overtake_aggression': 70,
+                'defense_intensity': 70
             },
             'confidence': 0.5,
             'rationale': 'No conditions matched, using default balanced strategy'

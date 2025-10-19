@@ -12,18 +12,19 @@ def run_single_scenario(args: Tuple) -> pd.DataFrame:
     """Top-level worker function for multiprocessing"""
     scenario_id, scenario, agents = args
     from sim.engine import simulate_race
-    df = simulate_race(scenario, agents)
+    # Use 2026 rules for new realistic physics engine
+    df = simulate_race(scenario, agents, use_2026_rules=True)
     df['scenario_id'] = scenario_id
     return df
 
 def run_simulations(num_scenarios: int, num_repeats: int, max_workers: int) -> Tuple[str, str, float]:
     """Run simulations with spawn-safe multiprocessing"""
     from sim.scenarios import generate_scenarios
-    from sim.agents import create_agents
+    from sim.agents_v2 import create_agents_v2
     
     start_time = time.time()
     scenarios = generate_scenarios(num_scenarios)
-    agents = create_agents()
+    agents = create_agents_v2()  # Use new 6-variable agents
     
     tasks = [(f"S{i:04d}_{r}", scenarios[i], agents)
              for i in range(num_scenarios)

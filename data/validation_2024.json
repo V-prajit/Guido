@@ -1,0 +1,58 @@
+{
+  "timestamp": "2025-10-19T00:38:03.323169",
+  "scenario": {
+    "id": 0,
+    "num_laps": 57,
+    "track_type": "balanced",
+    "rain_lap": null,
+    "safety_car_lap": null,
+    "temperature": 18.0,
+    "wind": "low",
+    "tire_strategy": "soft-hard",
+    "starting_positions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ]
+  },
+  "agents_tested": [
+    "VerstappenStyle",
+    "HamiltonStyle",
+    "AlonsoStyle"
+  ],
+  "comparisons": {
+    "VerstappenStyle": {
+      "simulated_avg_lap": 96.44,
+      "real_avg_lap": 95.84,
+      "lap_time_diff": 0.6,
+      "simulated_position": 2,
+      "real_position": 1,
+      "position_diff": 1,
+      "lap_time_within_tolerance": true
+    },
+    "HamiltonStyle": {
+      "simulated_avg_lap": 96.7,
+      "real_avg_lap": 96.66,
+      "lap_time_diff": 0.04,
+      "simulated_position": 3,
+      "real_position": 7,
+      "position_diff": 4,
+      "lap_time_within_tolerance": true
+    },
+    "AlonsoStyle": {
+      "simulated_avg_lap": 96.08,
+      "real_avg_lap": 97.18,
+      "lap_time_diff": 1.1,
+      "simulated_position": 1,
+      "real_position": 9,
+      "position_diff": 8,
+      "lap_time_within_tolerance": true
+    }
+  },
+  "validation_passed": true
+}
