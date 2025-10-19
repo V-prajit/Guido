@@ -1,0 +1,9 @@
+{
+  "num_scenarios": 1000,
+  "num_agents": 8,
+  "total_time_sec": 2.29,
+  "scenarios_per_sec": 436.0,
+  "avg_scenario_time_ms": 2.29,
+  "target_met": true,
+  "total_races": 8000
+}
