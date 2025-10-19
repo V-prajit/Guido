@@ -196,41 +196,74 @@ interface Box1_RaceTrackProps {
 }
 
 const Box1_RaceTrack: React.FC<Box1_RaceTrackProps> = ({ cars = MOCK_CARS }) => {
-  const [animatedCars, setAnimatedCars] = useState<CarData[]>(cars);
+  const [interpolatedCars, setInterpolatedCars] = useState<CarData[]>(cars);
   const pathRef = React.useRef<SVGPathElement>(null);
+  const animationFrameRef = React.useRef<number | null>(null);
 
-  // Animate cars
+  // Store previous and current backend states for interpolation
+  const previousCarsRef = React.useRef<CarData[]>(cars);
+  const currentCarsRef = React.useRef<CarData[]>(cars);
+  const lastUpdateTimeRef = React.useRef<number>(Date.now());
+  const updateIntervalRef = React.useRef<number>(500); // Backend sends every ~500ms
+
+  // Update interpolation targets when backend sends new data
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimatedCars((prevCars) =>
-        prevCars.map((car) => {
-          const speedFactor = car.speed / 300;
-          const progressIncrement = 0.002 * speedFactor;
+    if (cars.length > 0) {
+      previousCarsRef.current = currentCarsRef.current;
+      currentCarsRef.current = cars;
+      lastUpdateTimeRef.current = Date.now();
+    }
+  }, [cars]);
 
-          let newProgress = car.lapProgress + progressIncrement;
-          if (newProgress >= 1) newProgress = newProgress - 1;
+  // 60fps interpolation loop using requestAnimationFrame
+  useEffect(() => {
+    const animate = () => {
+      const now = Date.now();
+      const timeSinceUpdate = now - lastUpdateTimeRef.current;
 
-          let newSpeed = car.speed;
-          if (newProgress > 0.05 && newProgress < 0.15) {
-            newSpeed = Math.max(car.speed * 0.85, 180);
-          } else if (newProgress > 0.45 && newProgress < 0.55) {
-            newSpeed = Math.max(car.speed * 0.90, 220);
-          } else {
-            const maxSpeed = car.isUserCar ? 315 : 300 - (car.position * 5);
-            newSpeed = Math.min(car.speed + 2, maxSpeed);
+      // Calculate interpolation factor (0 to 1) based on expected update interval
+      const t = Math.min(timeSinceUpdate / updateIntervalRef.current, 1.0);
+
+      // Interpolate between previous and current states
+      const interpolated = currentCarsRef.current.map((currentCar, index) => {
+        const previousCar = previousCarsRef.current[index] || currentCar;
+
+        // Smooth interpolation of lap progress
+        let interpolatedProgress = previousCar.lapProgress + (currentCar.lapProgress - previousCar.lapProgress) * t;
+
+        // Handle lap wrap-around (1.0 → 0.0)
+        if (Math.abs(currentCar.lapProgress - previousCar.lapProgress) > 0.5) {
+          // Likely a lap completion
+          if (currentCar.lapProgress < previousCar.lapProgress) {
+            interpolatedProgress = previousCar.lapProgress + (1.0 + currentCar.lapProgress - previousCar.lapProgress) * t;
+            if (interpolatedProgress >= 1.0) interpolatedProgress -= 1.0;
           }
+        }
 
-          return {
-            ...car,
-            lapProgress: newProgress,
-            speed: Math.round(newSpeed),
-          };
-        })
-      );
-    }, 50);
+        // Interpolate speed
+        const interpolatedSpeed = Math.round(
+          previousCar.speed + (currentCar.speed - previousCar.speed) * t
+        );
 
-    return () => clearInterval(interval);
-  }, []);
+        return {
+          ...currentCar,
+          lapProgress: interpolatedProgress,
+          speed: interpolatedSpeed,
+        };
+      });
+
+      setInterpolatedCars(interpolated);
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, []); // Only set up once
 
   const getCarPosition = (lapProgress: number): TrackPoint => {
     if (!pathRef.current) return { x: 100, y: 250 };
@@ -301,8 +334,8 @@ const Box1_RaceTrack: React.FC<Box1_RaceTrackProps> = ({ cars = MOCK_CARS }) => 
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             />
 
-            {/* Cars */}
-            {animatedCars.map((car) => {
+            {/* Cars (60fps interpolated from backend data) */}
+            {interpolatedCars.map((car) => {
               const position = getCarPosition(car.lapProgress);
 
               return (

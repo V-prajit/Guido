@@ -30,8 +30,12 @@ export const useWebSocket = ({
   const [reconnectCount, setReconnectCount] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const isIntentionalCloseRef = useRef(false);  // Track intentional disconnects
 
   const connect = useCallback(() => {
+    // Don't connect if we intentionally closed
+    if (isIntentionalCloseRef.current) return;
+
     try {
       const ws = new WebSocket(url);
 
@@ -57,8 +61,8 @@ export const useWebSocket = ({
         wsRef.current = null;
         if (onClose) onClose();
 
-        // Attempt reconnection
-        if (reconnectCount < reconnectAttempts) {
+        // Only attempt reconnection if NOT intentionally closed
+        if (!isIntentionalCloseRef.current && reconnectCount < reconnectAttempts) {
           console.log(`Reconnecting... (${reconnectCount + 1}/${reconnectAttempts})`);
           reconnectTimeoutRef.current = setTimeout(() => {
             setReconnectCount((prev) => prev + 1);
@@ -79,9 +83,12 @@ export const useWebSocket = ({
   }, [url, onMessage, onOpen, onClose, onError, reconnectCount, reconnectAttempts, reconnectInterval]);
 
   useEffect(() => {
+    isIntentionalCloseRef.current = false;  // Reset on mount
     connect();
 
     return () => {
+      // Mark as intentional close (component unmounting)
+      isIntentionalCloseRef.current = true;
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
@@ -89,7 +96,7 @@ export const useWebSocket = ({
         wsRef.current.close();
       }
     };
-  }, [connect]);
+  }, [url]);  // Only reconnect if URL changes, not on every connect change
 
   const sendMessage = useCallback((data: any) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {

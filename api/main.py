@@ -421,14 +421,15 @@ async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator
         # Update session
         session_manager.update_session(game_state.session_id, game_state)
 
-        # Send lap update to client
+        # Send lap update to client (includes speed, gap_to_leader, lap_progress from game_loop)
         await websocket.send_json({
             'type': 'LAP_UPDATE',
             'lap': lap_result['lap'],
-            'player': lap_result.get('player'),
-            'opponents': lap_result.get('opponents', []),
+            'player': lap_result.get('player'),  # Now includes: speed, gap_to_leader, all telemetry
+            'opponents': lap_result.get('opponents', []),  # Now includes: speed, gap_to_leader, lap_progress
             'is_raining': lap_result.get('is_raining', False),
-            'safety_car_active': lap_result.get('safety_car_active', False)
+            'safety_car_active': lap_result.get('safety_car_active', False),
+            'server_timestamp': time.time()  # For frontend interpolation sync
         })
 
         # Check if race is complete

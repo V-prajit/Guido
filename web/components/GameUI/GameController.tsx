@@ -31,17 +31,22 @@ interface PlayerState {
   fuel_remaining: number;
   lap_time: number;
   cumulative_time: number;
+  speed: number;  // km/h from backend
+  gap_to_leader: number;  // seconds behind leader
 }
 
 interface OpponentState {
   name: string;
   agent_type: string;
   position: number;
-  lap_progress: number;
+  lap_progress: number;  // 0-1, calculated from cumulative_time
   battery_soc: number;
   tire_life: number;
   fuel_remaining: number;
   cumulative_time: number;
+  speed: number;  // km/h from backend
+  gap_to_leader: number;  // seconds behind leader
+  last_lap_time: number;  // last lap time in seconds
 }
 
 interface DecisionPoint {
@@ -77,31 +82,34 @@ const GameController: React.FC<GameControllerProps> = ({
   const [finalPosition, setFinalPosition] = useState<number | null>(null);
 
   // Convert game state to car data for track visualization
+  // ALL DATA NOW COMES FROM BACKEND - NO CALCULATIONS
   const getCarsForTrack = useCallback((): CarData[] => {
     if (!playerState || opponents.length === 0) return [];
 
     const cars: CarData[] = [];
 
-    // Player car
+    // Player car - use real backend data for ALL fields
     cars.push({
       id: "player",
       driverName: "You",
       position: playerState.position,
-      lapProgress: currentLap / totalLaps,
-      speed: Math.max(0, 300 - (playerState.lap_time - 88) * 10),
-      lapTime: `${playerState.lap_time.toFixed(3)}`,
+      lapProgress: playerState.gap_to_leader === 0
+        ? (currentLap / totalLaps)  // Leader uses lap-based progress
+        : playerState.cumulative_time / (currentLap * 90.0 || 1),  // Others use cumulative time
+      speed: playerState.speed,  // Direct from backend calculation
+      lapTime: playerState.lap_time.toFixed(3),
       isUserCar: true,
     });
 
-    // Opponent cars
+    // Opponent cars - use real backend data for ALL fields
     opponents.forEach((opp) => {
       cars.push({
         id: opp.name,
-        driverName: opp.name,
+        driverName: opp.name.split(' ')[0],  // First name only (e.g., "Lewis" instead of "Lewis Hamilton")
         position: opp.position,
-        lapProgress: opp.lap_progress,
-        speed: 290 - (opp.position * 5),
-        lapTime: "1:32.000",
+        lapProgress: opp.lap_progress,  // Already calculated in backend using cumulative_time
+        speed: opp.speed,  // Direct from backend calculation
+        lapTime: opp.last_lap_time?.toFixed(3) || "90.000",
         isUserCar: false,
       });
     });
@@ -270,6 +278,9 @@ const GameController: React.FC<GameControllerProps> = ({
                   tireLife={playerState.tire_life}
                   fuelRemaining={playerState.fuel_remaining}
                   lapTime={playerState.lap_time}
+                  gapAhead={playerState.position > 1 ? `+${playerState.gap_to_leader.toFixed(3)}s` : undefined}
+                  gapBehind={opponents.find(o => o.position === playerState.position + 1)?.gap_to_leader ?
+                    `${(opponents.find(o => o.position === playerState.position + 1)!.gap_to_leader - playerState.gap_to_leader).toFixed(3)}s` : undefined}
                   isRaining={isRaining}
                   safetyCarActive={safetyCarActive}
                 />

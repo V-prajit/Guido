@@ -3,6 +3,25 @@
 import { useState } from 'react';
 import Box1_RaceTrack from './BentoBoxes/Box1_RaceTrack';
 
+// Static chart data to avoid SSR hydration mismatches
+const CHART_DATA = [
+  { lap: 1, outerHeight: 120, innerHeight: 35 },
+  { lap: 2, outerHeight: 95, innerHeight: 55 },
+  { lap: 3, outerHeight: 140, innerHeight: 45 },
+  { lap: 4, outerHeight: 110, innerHeight: 70 },
+  { lap: 5, outerHeight: 85, innerHeight: 40 },
+  { lap: 6, outerHeight: 130, innerHeight: 60 },
+  { lap: 7, outerHeight: 105, innerHeight: 50 },
+  { lap: 8, outerHeight: 145, innerHeight: 65 },
+  { lap: 9, outerHeight: 90, innerHeight: 45 },
+  { lap: 10, outerHeight: 125, innerHeight: 55 },
+  { lap: 11, outerHeight: 100, innerHeight: 48 },
+  { lap: 12, outerHeight: 135, innerHeight: 62 },
+  { lap: 13, outerHeight: 115, innerHeight: 52 },
+  { lap: 14, outerHeight: 95, innerHeight: 58 },
+  { lap: 15, outerHeight: 120, innerHeight: 50 },
+];
+
 export default function BentoLayout() {
   const [selectedStrategy, setSelectedStrategy] = useState<number>(0);
 
@@ -211,13 +230,13 @@ export default function BentoLayout() {
           <div className="col-span-6 bg-white border border-black rounded-lg p-4">
             <h3 className="text-sm font-bold text-black mb-4 tracking-wide">POSITION GRAPH</h3>
             <div className="h-[250px] flex items-end justify-between gap-2 border-b border-l border-black/20 pb-4 pl-4">
-              {/* Placeholder graph bars */}
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((lap) => (
-                <div key={lap} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full bg-black/20 rounded-t" style={{ height: `${Math.random() * 100 + 50}px` }}>
-                    <div className="w-full bg-black rounded-t" style={{ height: `${Math.random() * 60 + 20}%` }}></div>
+              {/* Static chart bars to avoid hydration mismatch */}
+              {CHART_DATA.map((data) => (
+                <div key={data.lap} className="flex-1 flex flex-col items-center gap-1">
+                  <div className="w-full bg-black/20 rounded-t" style={{ height: `${data.outerHeight}px` }}>
+                    <div className="w-full bg-black rounded-t" style={{ height: `${data.innerHeight}%` }}></div>
                   </div>
-                  <span className="text-[8px] text-black/40">{lap}</span>
+                  <span className="text-[8px] text-black/40">{data.lap}</span>
                 </div>
               ))}
             </div>
