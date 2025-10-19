@@ -1,4 +1,7 @@
+"use client";
+
 import type { CSSProperties, ReactNode } from 'react';
+import { useGame } from "@/contexts/GameContext";
 
 interface BoxProps {
   className?: string;
@@ -17,9 +20,12 @@ const defaultLayout: CSSProperties = {
 const overlayStyle: CSSProperties = {
   display: "none",
 };
+
 export default function Box5({ className, style, children }: BoxProps) {
   const composedClassName = className ? `${baseClasses} ${className}` : baseClasses;
   const mergedStyle = style ? { ...defaultLayout, ...style } : defaultLayout;
+
+  const { player, currentLap, totalLaps, gameStarted } = useGame();
 
   return (
     <section className={composedClassName} style={mergedStyle}>
@@ -29,23 +35,33 @@ export default function Box5({ className, style, children }: BoxProps) {
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-xs text-text-secondary">Lap</span>
-            <span className="text-sm font-bold text-text-primary">15/57</span>
+            <span className="text-sm font-bold text-text-primary">
+              {gameStarted && player ? `${currentLap}/${totalLaps}` : '—/—'}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs text-text-secondary">Position</span>
-            <span className="text-sm font-bold text-text-primary">P4</span>
+            <span className="text-sm font-bold text-text-primary">
+              {gameStarted && player ? `P${player.position}` : '—'}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs text-text-secondary">Battery</span>
-            <span className="text-sm font-bold text-text-primary">45%</span>
+            <span className="text-sm font-bold text-text-primary">
+              {gameStarted && player ? `${player.battery_soc.toFixed(1)}%` : '—'}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs text-text-secondary">Tires</span>
-            <span className="text-sm font-bold text-text-primary">62%</span>
+            <span className="text-sm font-bold text-text-primary">
+              {gameStarted && player ? `${player.tire_life.toFixed(1)}%` : '—'}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-xs text-text-secondary">Fuel</span>
-            <span className="text-sm font-bold text-text-primary">28kg</span>
+            <span className="text-sm font-bold text-text-primary">
+              {gameStarted && player ? `${player.fuel_remaining.toFixed(1)}kg` : '—'}
+            </span>
           </div>
         </div>
       </div>

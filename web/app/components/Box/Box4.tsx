@@ -1,12 +1,20 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useGame } from "@/contexts/GameContext";
+import { getRecommendation } from "@/services/api";
 
 interface BoxProps {
   className?: string;
   style?: CSSProperties;
   children?: ReactNode;
+}
+
+interface StrategyDisplay {
+  name: string;
+  probability: string;
+  explanation: string;
 }
 
 const baseClasses =
@@ -20,26 +28,84 @@ const defaultLayout: CSSProperties = {
 const overlayStyle: CSSProperties = {
   display: "none",
 };
+
 export default function Box4({ className, style, children }: BoxProps) {
   const [selectedStrategy, setSelectedStrategy] = useState<number>(0);
+  const [strategies, setStrategies] = useState<StrategyDisplay[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const strategies = [
-    {
-      name: "AGGRESSIVE ATTACK",
-      probability: "75%",
-      explanation: "Rain reduces grip advantage. Deploy power now to gain track position before conditions worsen."
-    },
-    {
-      name: "CONSERVATIVE PLAY",
-      probability: "58%",
-      explanation: "Maintain current pace and tire management. Wait for opponent mistakes in difficult conditions."
-    },
-    {
-      name: "BALANCED DRIVE",
-      probability: "67%",
-      explanation: "Moderate push with strategic overtaking. Balance risk and reward for optimal position gain."
+  const { player, currentLap, isRaining, gameStarted } = useGame();
+
+  // Fetch recommendations when player state changes
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (!gameStarted || !player) {
+        // Show placeholder when no game running
+        setStrategies([
+          {
+            name: "AGGRESSIVE ATTACK",
+            probability: "—",
+            explanation: "Start race to see AI-powered recommendations"
+          },
+          {
+            name: "CONSERVATIVE PLAY",
+            probability: "—",
+            explanation: "Strategies will adapt to race conditions"
+          },
+          {
+            name: "BALANCED DRIVE",
+            probability: "—",
+            explanation: "Real-time analysis from backend"
+          }
+        ]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const response = await getRecommendation({
+          lap: currentLap,
+          battery_soc: player.battery_soc,
+          position: player.position,
+          rain: isRaining,
+          tire_life: player.tire_life,
+          fuel_remaining: player.fuel_remaining,
+        });
+
+        // Map API response to display format
+        const mapped: StrategyDisplay[] = response.recommendations.slice(0, 3).map((rec: any, index: number) => ({
+          name: ['AGGRESSIVE ATTACK', 'BALANCED DRIVE', 'CONSERVATIVE PLAY'][index] || 'STRATEGY',
+          probability: `${Math.round((rec.confidence || 0.5) * 100)}%`,
+          explanation: rec.rationale || rec.expected_outcome || 'No explanation available',
+        }));
+
+        setStrategies(mapped.length > 0 ? mapped : [
+          {
+            name: "NO RECOMMENDATIONS",
+            probability: "—",
+            explanation: "Unable to generate recommendations at this time"
+          }
+        ]);
+      } catch (error) {
+        console.error('[Box4] Failed to fetch recommendations:', error);
+        setStrategies([
+          {
+            name: "ERROR",
+            probability: "—",
+            explanation: "Failed to connect to backend API"
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Debounce API calls - only fetch every 5 laps or when rain starts
+    const shouldFetch = gameStarted && player && (currentLap % 5 === 0 || currentLap === 1);
+    if (shouldFetch) {
+      fetchRecommendations();
     }
-  ];
+  }, [gameStarted, player, currentLap, isRaining]);
 
   const composedClassName = className ? `${baseClasses} ${className}` : baseClasses;
   const mergedStyle = style ? { ...defaultLayout, ...style } : defaultLayout;
@@ -48,11 +114,14 @@ export default function Box4({ className, style, children }: BoxProps) {
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
       <div className="relative z-[1] flex flex-1 flex-col p-6">
-        <h3 className="text-lg font-bold text-text-primary mb-6 tracking-wide">MULTI-AGENTIC INSIGHTS</h3>
+        <h3 className="text-lg font-bold text-text-primary mb-6 tracking-wide">
+          MULTI-AGENTIC INSIGHTS
+          {loading && <span className="ml-2 text-xs text-text-secondary">Loading...</span>}
+        </h3>
         <div className="grid grid-cols-3 gap-4">
           {strategies.map((strategy, index) => (
             <div
-              key={index}
+              key={`${strategy.name}-${strategy.probability}-${index}`}
               onClick={() => setSelectedStrategy(index)}
               className={`border ${
                 selectedStrategy === index ? 'border-text-primary bg-text-primary/5' : 'border-border/40'

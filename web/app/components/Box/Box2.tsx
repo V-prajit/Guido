@@ -1,9 +1,9 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from 'react';
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, useSpring, useTransform } from "framer-motion";
-import raceData from "../../../mock/box2MD.json";
+import { useGame } from "@/contexts/GameContext";
 
 // --- BASELINE STRUCTURE ---
 interface BoxProps {
@@ -20,10 +20,11 @@ const defaultLayout: CSSProperties = {
 const overlayStyle: CSSProperties = { display: "none" };
 
 // --- TYPE DEFINITIONS ---
-interface TelemetryData {
-  time_sec: number;
+interface TelemetrySnapshot {
   fuelRemaining_kg: number;
   energyRemaining_kWh: number;
+  fuelDelta: number;
+  energyDelta: number;
 }
 
 // --- GAUGE CONFIGURATION ---
@@ -97,34 +98,65 @@ export default function Box2({ className, style, children }: BoxProps) {
   const composedClassName = className ? `${baseClasses} ${className}` : baseClasses;
   const mergedStyle = style ? { ...defaultLayout, ...style } : defaultLayout;
 
-  const [telemetry, setTelemetry] = useState<TelemetryData>(raceData[0]);
+  const { player, gameStarted } = useGame();
+
+  // Use ref instead of state to avoid infinite loop
+  const prevTelemetryRef = useRef<{ fuel: number; energy: number } | null>(null);
   const [history, setHistory] = useState<{ fuel: number[], energy: number[] }>({ fuel: [], energy: [] });
   const [ersMode, setErsMode] = useState<'DEPLOY' | 'HARVEST' | 'IDLE'>('IDLE');
 
+  // Current telemetry snapshot
+  const telemetry: TelemetrySnapshot = useMemo(() => {
+    if (!player || !gameStarted) {
+      return {
+        fuelRemaining_kg: 0,
+        energyRemaining_kWh: 0,
+        fuelDelta: 0,
+        energyDelta: 0,
+      };
+    }
+
+    const currentFuel = player.fuel_remaining;
+    const currentEnergy = player.battery_soc; // Use SOC percentage directly
+
+    const fuelDelta = prevTelemetryRef.current ? prevTelemetryRef.current.fuel - currentFuel : 0;
+    const energyDelta = prevTelemetryRef.current ? prevTelemetryRef.current.energy - currentEnergy : 0;
+
+    return {
+      fuelRemaining_kg: currentFuel,
+      energyRemaining_kWh: currentEnergy, // Actually percentage now, but keeping field name
+      fuelDelta,
+      energyDelta,
+    };
+  }, [player, gameStarted]);
+
+  // Update history and ERS mode when telemetry changes
   useEffect(() => {
-    let frame = 0;
-    const timer = setInterval(() => {
-      frame = (frame + 1) % raceData.length;
-      const currentData = raceData[frame];
-      const prevData = raceData[frame > 0 ? frame - 1 : 0];
-      setTelemetry(currentData);
+    if (!player || !gameStarted) return;
 
-      const fuelDelta = prevData.fuelRemaining_kg - currentData.fuelRemaining_kg;
-      const energyDelta = prevData.energyRemaining_kWh - currentData.energyRemaining_kWh;
+    const currentFuel = player.fuel_remaining;
+    const currentEnergy = player.battery_soc; // Use percentage directly
 
+    // Calculate deltas
+    if (prevTelemetryRef.current) {
+      const fuelDelta = prevTelemetryRef.current.fuel - currentFuel;
+      const energyDelta = prevTelemetryRef.current.energy - currentEnergy;
+
+      // Update history (keep last 30 points)
       setHistory(prev => ({
         fuel: [...prev.fuel, fuelDelta].slice(-30),
-        energy: [...prev.energy, energyDelta * 100].slice(-30) // Scale energy delta for visibility
+        energy: [...prev.energy, energyDelta].slice(-30),
       }));
 
-      if (energyDelta > 0.001) setErsMode('DEPLOY');
-      else if (energyDelta < -0.001) setErsMode('HARVEST');
+      // Determine ERS mode based on energy delta
+      if (energyDelta > 0.1) setErsMode('DEPLOY');
+      else if (energyDelta < -0.1) setErsMode('HARVEST');
       else setErsMode('IDLE');
+    }
 
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
+    // Store current as previous for next delta calculation
+    prevTelemetryRef.current = { fuel: currentFuel, energy: currentEnergy };
+  }, [player, gameStarted]);
 
   return (
     <section className={composedClassName} style={mergedStyle}>
@@ -136,13 +168,13 @@ export default function Box2({ className, style, children }: BoxProps) {
         <div className="flex items-start justify-center gap-8 w-full mt-8">
           {/* Energy Display */}
           <div className="flex flex-col items-center gap-1">
-            <FlatGauge value={telemetry.energyRemaining_kWh} maxValue={MAX_ENERGY} />
+            <FlatGauge value={telemetry.energyRemaining_kWh} maxValue={100} />
             <div className="text-center w-28 h-16">
               <div className="flex justify-center items-center gap-1.5">
                 <p className="text-xs font-bold tracking-wider uppercase">ENERGY</p>
                 <p className="font-mono text-xs font-bold text-cyan-400">[{ersMode}]</p>
               </div>
-              <p className="text-xl font-bold text-text-primary">{telemetry.energyRemaining_kWh.toFixed(2)}<span className="text-xs text-text-secondary font-medium ml-1">kWh</span></p>
+              <p className="text-xl font-bold text-text-primary">{telemetry.energyRemaining_kWh.toFixed(1)}<span className="text-xs text-text-secondary font-medium ml-1">%</span></p>
             </div>
             <Sparkline data={history.energy} color="#06b6d4" />
           </div>

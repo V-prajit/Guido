@@ -148,3 +148,91 @@ export interface BoxWallData {
   latency_ms: number;
   last_updated: string;
 }
+
+// ==========================================
+// GAME MODE TYPES (from backend WebSocket)
+// ==========================================
+
+export interface PlayerState {
+  position: number;
+  battery_soc: number;
+  tire_life: number;
+  fuel_remaining: number;
+  lap_time: number;
+  cumulative_time: number;
+  speed: number;
+  lap_progress: number;
+  gap_to_leader: number;
+  energy_deployment?: number;
+  tire_management?: number;
+  fuel_strategy?: number;
+  ers_mode?: number;
+}
+
+export interface OpponentState {
+  name: string;
+  agent_type: string;
+  position: number;
+  lap_progress: number;
+  battery_soc: number;
+  tire_life: number;
+  fuel_remaining: number;
+  cumulative_time: number;
+  speed: number;
+  gap_to_leader: number;
+}
+
+export interface DecisionPoint {
+  event_type: string;
+  lap: number;
+  position: number;
+  battery_soc: number;
+  tire_life: number;
+  fuel_remaining: number;
+  recommended: StrategyRecommendation[];
+  avoid?: StrategyRecommendation;
+  latency_ms?: number;
+  used_fallback?: boolean;
+}
+
+export interface StrategyRecommendation {
+  strategy_id: number;
+  strategy_name?: string;
+  win_rate: number;
+  avg_position?: number;
+  rationale: string;
+  confidence?: number;
+  risk?: string;
+  strategy_params?: {
+    energy_deployment: number;
+    tire_management: number;
+    fuel_strategy: number;
+    ers_mode: number;
+    overtake_aggression: number;
+    defense_intensity: number;
+  };
+}
+
+export interface DecisionHistoryEntry {
+  lap: number;
+  event_type: string;
+  strategy_chosen: number;
+  timestamp: number;
+  outcome?: string;
+}
+
+export interface CarData {
+  id: string;
+  driverName: string;
+  position: number;
+  lapProgress: number;
+  speed: number;
+  lapTime: string;
+  isUserCar: boolean;
+}
+
+export interface PositionHistoryEntry {
+  lap: number;
+  position: number;
+  timestamp: number;
+}

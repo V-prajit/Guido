@@ -3,62 +3,13 @@
 import type { CSSProperties } from 'react';
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-
-// Type definitions
-interface CarData {
-  id: string;
-  driverName: string;
-  position: number;
-  lapProgress: number; // 0 to 1
-  speed: number; // km/h
-  lapTime: string;
-  isUserCar: boolean;
-}
+import { useGame } from "@/contexts/GameContext";
+import type { CarData } from "@/types";
 
 interface TrackPoint {
   x: number;
   y: number;
 }
-
-// Mock data - replace with real data from your backend
-const MOCK_CARS: CarData[] = [
-  {
-    id: "car-1",
-    driverName: "You",
-    position: 1,
-    lapProgress: 0.75,
-    speed: 312,
-    lapTime: "1:32.145",
-    isUserCar: true,
-  },
-  {
-    id: "car-2",
-    driverName: "Verstappen",
-    position: 2,
-    lapProgress: 0.68,
-    speed: 308,
-    lapTime: "1:32.389",
-    isUserCar: false,
-  },
-  {
-    id: "car-3",
-    driverName: "Hamilton",
-    position: 3,
-    lapProgress: 0.54,
-    speed: 295,
-    lapTime: "1:32.891",
-    isUserCar: false,
-  },
-  {
-    id: "car-4",
-    driverName: "Leclerc",
-    position: 4,
-    lapProgress: 0.42,
-    speed: 287,
-    lapTime: "1:33.125",
-    isUserCar: false,
-  },
-];
 
 // Real Bahrain International Circuit coordinates from GeoJSON
 // Converted and scaled for SVG viewport
@@ -156,42 +107,12 @@ const overlayStyle: CSSProperties = {
   display: "none",
 };
 
-export default function Box1({ cars = MOCK_CARS, className, style }: BoxProps) {
-  const [animatedCars, setAnimatedCars] = useState<CarData[]>(cars);
+export default function Box1({ cars, className, style }: BoxProps) {
+  const { getCarsForTrack, gameStarted } = useGame();
   const pathRef = React.useRef<SVGPathElement>(null);
 
-  // Animate cars
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAnimatedCars((prevCars) =>
-        prevCars.map((car) => {
-          const speedFactor = car.speed / 300;
-          const progressIncrement = 0.002 * speedFactor;
-
-          let newProgress = car.lapProgress + progressIncrement;
-          if (newProgress >= 1) newProgress = newProgress - 1;
-
-          let newSpeed = car.speed;
-          if (newProgress > 0.05 && newProgress < 0.15) {
-            newSpeed = Math.max(car.speed * 0.85, 180);
-          } else if (newProgress > 0.45 && newProgress < 0.55) {
-            newSpeed = Math.max(car.speed * 0.90, 220);
-          } else {
-            const maxSpeed = car.isUserCar ? 315 : 300 - (car.position * 5);
-            newSpeed = Math.min(car.speed + 2, maxSpeed);
-          }
-
-          return {
-            ...car,
-            lapProgress: newProgress,
-            speed: Math.round(newSpeed),
-          };
-        })
-      );
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, []);
+  // Use real data from GameContext if available, otherwise empty array
+  const displayCars = cars || (gameStarted ? getCarsForTrack() : []);
 
   const getCarPosition = (lapProgress: number): TrackPoint => {
     if (!pathRef.current) return { x: 100, y: 250 };
@@ -268,7 +189,7 @@ export default function Box1({ cars = MOCK_CARS, className, style }: BoxProps) {
                 />
 
                 {/* Cars */}
-                {animatedCars.map((car) => {
+                {displayCars.map((car) => {
                 const position = getCarPosition(car.lapProgress);
 
                 return (
