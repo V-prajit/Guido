@@ -1,86 +1,138 @@
 {
-  "run_id": "RUN-HYPERION-26A",
-  "scenarios_completed": 1000,
-  "elapsed_sec": 8.4,
-  "scenarios_per_sec": 119,
-  "energy_reclaimed_mj": 1.9,
-  "peak_tyre_surface_temp": 812,
-  "telemetry": [
+  "circuit": {
+    "name": "Bahrain International Circuit",
+    "weekend": "Desert Preseason Analysis",
+    "season": "2026 Power Unit Shakeout",
+    "total_laps": 57,
+    "turns": 15,
+    "powered_by": "Gemini TwinStack"
+  },
+  "agents": [
     {
-      "phase": "ignition",
-      "progress": 8,
-      "scenarios": 82,
-      "message": "Systems check: calibrating hybrid deploy maps.",
-      "delay_ms": 350
+      "id": "electric_blitzer",
+      "codename": "Electric Blitzer",
+      "strapline": "High-load ERS surge",
+      "color": "#DC0000",
+      "accent": "#FF4444",
+      "glow": "rgba(220,0,0,0.35)",
+      "position": 1,
+      "lap_time": 92.42,
+      "gap_to_leader": 0,
+      "description": "Max ERS load through straights, accepts thermal debt for late-race payoff.",
+      "energy_split": {
+        "deploy_straight": 88,
+        "deploy_corner": 72,
+        "harvest": 34
+      }
     },
     {
-      "phase": "formation",
-      "progress": 22,
-      "scenarios": 220,
-      "message": "Lights out—launching 8 strategy agents.",
-      "delay_ms": 420
-    },
-    {
-      "phase": "sector-one",
-      "progress": 46,
-      "scenarios": 460,
-      "message": "ERS harvest models converging on braking zones.",
-      "delay_ms": 520
-    },
-    {
-      "phase": "sector-two",
-      "progress": 71,
-      "scenarios": 710,
-      "message": "Detecting lift-coast opportunities in turbulence traffic.",
-      "delay_ms": 620
-    },
-    {
-      "phase": "sector-three",
-      "progress": 90,
-      "scenarios": 900,
-      "message": "Validating battery state envelopes under rain offsets.",
-      "delay_ms": 640
-    },
-    {
-      "phase": "chequered",
-      "progress": 100,
-      "scenarios": 1000,
-      "message": "Chequered flag—synthesizing telemetry for Gemini handoff.",
-      "delay_ms": 560
+      "id": "energy_saver",
+      "codename": "Energy Saver",
+      "strapline": "Delta-protect regen",
+      "color": "#FFD700",
+      "accent": "#FFF455",
+      "glow": "rgba(255,215,0,0.35)",
+      "position": 2,
+      "lap_time": 93.11,
+      "gap_to_leader": 0.69,
+      "description": "Protects SOC window with disciplined harvesting, aims for undercut resilience.",
+      "energy_split": {
+        "deploy_straight": 62,
+        "deploy_corner": 48,
+        "harvest": 58
+      }
     }
   ],
-  "strategies": [
+  "track_sections": [
     {
-      "codename": "Hyperdrive Δ",
-      "focus": "High-speed ERS attack",
-      "win_share": 0.36,
-      "fastest_lap_delta": -0.84,
-      "battery_margin": 0.12,
-      "color": "#FF1801"
+      "id": "S1",
+      "label": "Turns 1-3",
+      "agent_one_deploy": 78,
+      "agent_two_deploy": 54,
+      "svg_path": "M40 260 C120 110 200 110 280 260"
     },
     {
-      "codename": "Harvest Halo",
-      "focus": "Aggressive regen in heavy traffic",
-      "win_share": 0.28,
-      "fastest_lap_delta": -0.35,
-      "battery_margin": 0.24,
-      "color": "#00A0E9"
+      "id": "S2",
+      "label": "Turns 4-5",
+      "agent_one_deploy": 84,
+      "agent_two_deploy": 58,
+      "svg_path": "M280 260 C360 320 420 180 500 220"
     },
     {
-      "codename": "Balanced Apex",
-      "focus": "Adaptive deploy by aero trim",
-      "win_share": 0.22,
-      "fastest_lap_delta": -0.42,
-      "battery_margin": 0.18,
-      "color": "#67E8F9"
+      "id": "S3",
+      "label": "Turns 6-7",
+      "agent_one_deploy": 66,
+      "agent_two_deploy": 52,
+      "svg_path": "M500 220 C560 240 620 160 660 200"
     },
     {
-      "codename": "Rainfall 72",
-      "focus": "Wet-weather stability from SOC buffer",
-      "win_share": 0.14,
-      "fastest_lap_delta": -0.19,
-      "battery_margin": 0.31,
-      "color": "#4ADE80"
+      "id": "S4",
+      "label": "Turns 8-10",
+      "agent_one_deploy": 71,
+      "agent_two_deploy": 63,
+      "svg_path": "M660 200 C700 240 740 280 780 240"
+    },
+    {
+      "id": "S5",
+      "label": "Turns 11-12",
+      "agent_one_deploy": 90,
+      "agent_two_deploy": 68,
+      "svg_path": "M780 240 C820 200 860 170 900 210"
+    },
+    {
+      "id": "S6",
+      "label": "Turns 13-15",
+      "agent_one_deploy": 86,
+      "agent_two_deploy": 62,
+      "svg_path": "M900 210 C960 260 1040 260 1100 220"
     }
+  ],
+  "metrics": [
+    {
+      "label": "Energy Deployment",
+      "unit": "%",
+      "agent_one": 85,
+      "agent_two": 60
+    },
+    {
+      "label": "Tyre Push",
+      "unit": "%",
+      "agent_one": 70,
+      "agent_two": 50
+    },
+    {
+      "label": "Fuel Rich Mix",
+      "unit": "%",
+      "agent_one": 65,
+      "agent_two": 40
+    },
+    {
+      "label": "Battery SOC Buffer",
+      "unit": "%",
+      "agent_one": 54,
+      "agent_two": 78
+    }
+  ],
+  "lap_battery": [
+    { "lap": 1, "agent_one": 97, "agent_two": 99 },
+    { "lap": 8, "agent_one": 91, "agent_two": 95 },
+    { "lap": 15, "agent_one": 86, "agent_two": 92 },
+    { "lap": 23, "agent_one": 78, "agent_two": 88 },
+    { "lap": 31, "agent_one": 71, "agent_two": 82 },
+    { "lap": 38, "agent_one": 64, "agent_two": 77 },
+    { "lap": 44, "agent_one": 57, "agent_two": 71 },
+    { "lap": 51, "agent_one": 48, "agent_two": 66 },
+    { "lap": 57, "agent_one": 41, "agent_two": 60 }
+  ],
+  "lap_delta": [
+    { "lap": 1, "delta": -0.32 },
+    { "lap": 8, "delta": -0.21 },
+    { "lap": 15, "delta": -0.45 },
+    { "lap": 23, "delta": -0.58 },
+    { "lap": 31, "delta": -0.42 },
+    { "lap": 38, "delta": -0.30 },
+    { "lap": 44, "delta": -0.12 },
+    { "lap": 51, "delta": 0.08 },
+    { "lap": 57, "delta": 0.21 }
   ]
 }

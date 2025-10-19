@@ -3,24 +3,47 @@
 
 @import 'tailwindcss';
 
+html {
+  scroll-behavior: smooth;
+  background-color: #050505;
+}
+
 :root {
-  --f1-red: #ff1801;
-  --f1-black: #050505;
-  --f1-white: #f5f5f5;
-  --f1-gray: #272727;
-  --f1-blue: #00a0e9;
+  --f1-red: #dc0000;
+  --f1-gold: #ffd700;
+  --f1-midnight: #0a0a0a;
+  --f1-panel: #111111;
+  --f1-text: #f5f5f5;
+  --f1-muted: #9f9f9f;
 }
 
 body {
-  background-color: #000;
-  color: #f5f5f5;
+  position: relative;
+  min-height: 100vh;
+  background-color: var(--f1-midnight);
+  color: var(--f1-text);
   font-family: 'Titillium Web', sans-serif;
-  background-image: radial-gradient(circle at 50% -10%, rgba(255, 24, 1, 0.12), transparent 55%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%),
-    linear-gradient(135deg, transparent 75%, rgba(255, 255, 255, 0.04) 75%);
+  background-image: radial-gradient(circle at 50% -10%, rgba(255, 24, 1, 0.18), transparent 55%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
+    linear-gradient(135deg, transparent 75%, rgba(255, 255, 255, 0.03) 75%);
   background-size: 100% 100%, 18px 18px, 18px 18px;
   background-position: 0 0, 0 0, 9px 9px;
   background-repeat: no-repeat, repeat, repeat;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at top right, rgba(255, 215, 0, 0.12), transparent 45%),
+    radial-gradient(circle at 15% 25%, rgba(220, 0, 0, 0.15), transparent 50%);
+  z-index: -1;
+}
+
+::selection {
+  background: rgba(220, 0, 0, 0.4);
+  color: #fff;
 }
 
 h1,
