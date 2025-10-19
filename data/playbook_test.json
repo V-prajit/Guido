@@ -1,0 +1,76 @@
+{
+  "rules": [
+    {
+      "rule": "Emergency Battery Conservation",
+      "condition": "battery_soc < 20",
+      "action": {
+        "deploy_straight": 40,
+        "deploy_corner": 35,
+        "harvest": 80,
+        "use_boost": false
+      },
+      "confidence": 0.92,
+      "uplift_win_pct": 25.3,
+      "rationale": "Critical: avoid severe low battery penalty (<20% SOC) by aggressive harvesting"
+    },
+    {
+      "rule": "Late Race Battery Conservation",
+      "condition": "battery_soc < 35 and lap > 45",
+      "action": {
+        "deploy_straight": 55,
+        "deploy_corner": 50,
+        "harvest": 70,
+        "use_boost": false
+      },
+      "confidence": 0.88,
+      "uplift_win_pct": 18.7,
+      "rationale": "Late race with low battery requires conservative deployment to finish strong"
+    },
+    {
+      "rule": "Early Race Aggression",
+      "condition": "battery_soc > 80 and lap < 15",
+      "action": {
+        "deploy_straight": 95,
+        "deploy_corner": 85,
+        "harvest": 40,
+        "use_boost": false
+      },
+      "confidence": 0.85,
+      "uplift_win_pct": 12.4,
+      "rationale": "Exploit high battery early for maximum pace advantage"
+    },
+    {
+      "rule": "Mid Race Low Battery",
+      "condition": "battery_soc < 40 and lap > 25 and lap < 45",
+      "action": {
+        "deploy_straight": 60,
+        "deploy_corner": 55,
+        "harvest": 65,
+        "use_boost": false
+      },
+      "confidence": 0.79,
+      "uplift_win_pct": 8.5,
+      "rationale": "Mid-race battery management to ensure sufficient energy for finish"
+    },
+    {
+      "rule": "Optimal Baseline",
+      "condition": "battery_soc >= 20",
+      "action": {
+        "deploy_straight": 78,
+        "deploy_corner": 68,
+        "harvest": 55,
+        "use_boost": false
+      },
+      "confidence": 0.91,
+      "uplift_win_pct": 22.1,
+      "rationale": "Proven balanced strategy that wins 72% of races across diverse scenarios"
+    }
+  ],
+  "generated_at": "2025-10-18T20:15:00",
+  "num_simulations": 1000,
+  "metadata": {
+    "source": "test_playbook",
+    "purpose": "H5-H6 validation testing",
+    "fallback": false
+  }
+}
