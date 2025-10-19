@@ -27,8 +27,8 @@ export default function Logo() {
           src="/guido.png"
           alt="Guido"
           style={{
-            height: '3.5rem',
-            marginLeft: '0.5rem',
+            height: '5rem',
+            marginLeft: '-1.5rem',
           }}
         />
       </h1>
