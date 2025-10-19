@@ -153,6 +153,20 @@ def run_validation(num_scenarios=20, seed=9999):
 
     print("=" * 70)
 
+    # Display rule usage statistics
+    if hasattr(adaptive, 'rule_usage') and adaptive.rule_usage:
+        print("\nRULE USAGE STATISTICS")
+        print("=" * 70)
+
+        total_decisions = sum(adaptive.rule_usage.values())
+        sorted_rules = sorted(adaptive.rule_usage.items(), key=lambda x: -x[1])
+
+        for rule_name, count in sorted_rules:
+            percentage = (count / total_decisions) * 100 if total_decisions > 0 else 0
+            print(f'  {rule_name}: {count} times ({percentage:.1f}%)')
+
+        print("=" * 70)
+
     # Return results
     results = {
         'num_scenarios': num_scenarios,
@@ -164,6 +178,20 @@ def run_validation(num_scenarios=20, seed=9999):
         'passed': passed,
         'playbook_loaded': len(playbook.get('rules', [])) > 0
     }
+
+    # Add rule usage statistics to results
+    if hasattr(adaptive, 'rule_usage') and adaptive.rule_usage:
+        total_decisions = sum(adaptive.rule_usage.values())
+        results['rule_usage'] = {
+            'total_decisions': total_decisions,
+            'rules': {
+                rule_name: {
+                    'count': count,
+                    'percentage': round((count / total_decisions) * 100, 1) if total_decisions > 0 else 0
+                }
+                for rule_name, count in adaptive.rule_usage.items()
+            }
+        }
 
     return results
 
