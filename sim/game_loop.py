@@ -34,10 +34,11 @@ class GameLoopOrchestrator:
 
         # Timing configuration: adjust LAP_TIME_MULTIPLIER for demo speed
         # 1.0 = realistic 90s laps (57 laps = 85 min race)
+        # 5.0 = demo-friendly 18s laps (57 laps = 17 min race)
         # 10.0 = fast 9s laps (57 laps = 8.5 min race)
         # 50.0 = ultra-fast 1.8s laps (57 laps = 2.7 min race)
         import os
-        self.lap_time_multiplier = float(os.getenv("LAP_TIME_MULTIPLIER", "50.0"))
+        self.lap_time_multiplier = float(os.getenv("LAP_TIME_MULTIPLIER", "5.0"))
         self.base_lap_time = 90.0
 
     def advance_lap(self) -> Dict:
@@ -124,6 +125,9 @@ class GameLoopOrchestrator:
         # Add some randomness
         lap_time += np.random.uniform(-0.5, 0.5)
 
+        # Apply LAP_TIME_MULTIPLIER for demo speed (e.g., 90s / 5.0 = 18s)
+        lap_time = lap_time / self.lap_time_multiplier
+
         player.lap_time = lap_time
         player.cumulative_time += lap_time
 
@@ -187,6 +191,9 @@ class GameLoopOrchestrator:
             # Add randomness (AI varies more than player for realism)
             lap_time += np.random.uniform(-1.0, 1.0)
 
+            # Apply LAP_TIME_MULTIPLIER for demo speed (e.g., 90s / 5.0 = 18s)
+            lap_time = lap_time / self.lap_time_multiplier
+
             opponent.cumulative_time += lap_time
             opponent.last_lap_time = lap_time  # Track for speed calculation
 
@@ -229,36 +236,36 @@ class GameLoopOrchestrator:
 
         Speed: Derived from lap_time (faster lap = higher speed)
         Gap to leader: Time difference from leader's cumulative time
-        Lap progress: Position within current lap (0-1 per lap for smooth track animation)
+        Lap progress: Position within current lap (0-1 cycling per lap for smooth track animation)
+
+        CRITICAL FIX: Use modulo-based calculation to avoid reliance on global current_lap,
+        which caused cars to get stuck when cumulative_time didn't align with expected schedule.
         """
         # Find the race leader (lowest cumulative time)
         all_racers = [self.game_state.player] + self.game_state.opponents
         leader_time = min(racer.cumulative_time for racer in all_racers)
+
+        # Expected lap time in demo units (e.g., 90s / 5.0 = 18s)
+        expected_lap_time = self.base_lap_time / self.lap_time_multiplier
 
         # Update player metrics
         player = self.game_state.player
         player.speed = self._calculate_speed(player.lap_time)
         player.gap_to_leader = player.cumulative_time - leader_time
 
-        # Progress WITHIN current lap: 0-1 per lap for smooth animation around track
-        # Formula: (current_lap - 1 + fraction_through_lap) / total_laps
-        # This makes each car smoothly move from 0→1 per lap
-        # Account for timing multiplier (for demo speed control)
-        expected_lap_time = self.base_lap_time / self.lap_time_multiplier
-        expected_time_to_current_lap_start = (current_lap - 1) * expected_lap_time
-        fraction_through_lap = (player.cumulative_time - expected_time_to_current_lap_start) / expected_lap_time
-        fraction_through_lap = max(0.0, min(1.0, fraction_through_lap))  # Clamp 0-1
-        player.lap_progress = (current_lap - 1 + fraction_through_lap) / self.game_state.total_laps
+        # FIX: Modulo-based lap_progress (independent of global current_lap)
+        # This gives fractional laps (e.g., 5.7 laps), take remainder for 0-1 progress
+        car_fractional_laps = player.cumulative_time / expected_lap_time
+        player.lap_progress = float(car_fractional_laps - int(car_fractional_laps))  # Equivalent to % 1.0
 
         # Update opponent metrics
         for opponent in self.game_state.opponents:
             opponent.speed = self._calculate_speed(opponent.last_lap_time)
             opponent.gap_to_leader = opponent.cumulative_time - leader_time
 
-            # Same calculation for opponents
-            fraction_through_lap = (opponent.cumulative_time - expected_time_to_current_lap_start) / expected_lap_time
-            fraction_through_lap = max(0.0, min(1.0, fraction_through_lap))
-            opponent.lap_progress = (current_lap - 1 + fraction_through_lap) / self.game_state.total_laps
+            # FIX: Same modulo-based calculation per car
+            opp_fractional_laps = opponent.cumulative_time / expected_lap_time
+            opponent.lap_progress = float(opp_fractional_laps - int(opp_fractional_laps))
 
     def _calculate_speed(self, lap_time: float) -> float:
         """

@@ -24,13 +24,35 @@ export default function Box6({ className, style, children }: BoxProps) {
   return (
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
-      {children ? (
-        <div className="relative z-[1] flex flex-1 flex-col p-6">{children}</div>
-      ) : (
-        <span className="relative z-[1] p-6 text-xs font-semibold uppercase tracking-wider text-text-secondary">
-          Box 6
-        </span>
-      )}
+      <div className="relative z-[1] flex flex-1 flex-col p-6">
+        <h3 className="text-sm font-bold text-text-primary mb-4 tracking-wide">AGENT PERFORMANCE</h3>
+        <div className="space-y-3">
+          <div className="border-b border-border/20 pb-2">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm font-bold text-text-primary">You</span>
+              <span className="text-xs text-text-secondary">65% optimal</span>
+            </div>
+          </div>
+          <div className="border-b border-border/20 pb-2">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-text-primary">Pure AI</span>
+              <span className="text-xs text-text-secondary">98% optimal</span>
+            </div>
+          </div>
+          <div className="border-b border-border/20 pb-2">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-text-primary">Verstappen</span>
+              <span className="text-xs text-text-secondary">72% optimal</span>
+            </div>
+          </div>
+          <div className="pb-2">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-text-primary">Hamilton</span>
+              <span className="text-xs text-text-secondary">68% optimal</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

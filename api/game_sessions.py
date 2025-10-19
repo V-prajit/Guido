@@ -22,6 +22,7 @@ class PlayerState:
     cumulative_time: float
     speed: float = 0.0  # Current speed (km/h) for visualization
     gap_to_leader: float = 0.0  # Time gap to race leader (seconds)
+    lap_progress: float = 0.0  # Position on track 0-1 (normalized across full race)
 
     # Strategy parameters (6 variables)
     energy_deployment: float = 60.0
@@ -72,6 +73,9 @@ class GameState:
     current_decision_point: Optional[dict] = None
     decision_history: list[dict] = field(default_factory=list)
 
+    # Race control - pause/resume mechanism for decision points
+    pause_event: Optional[asyncio.Event] = None
+
     # Metadata
     created_at: float = field(default_factory=time.time)
     last_updated: float = field(default_factory=time.time)
@@ -95,16 +99,17 @@ class GameSessionManager:
         """Create a new game session"""
         session_id = str(uuid.uuid4())
 
-        # Initialize player state
+        # Initialize player state (P1 - front of grid)
         player = PlayerState(
             position=1,  # Start optimistically
             battery_soc=100.0,
             tire_life=100.0,
             fuel_remaining=100.0,
             lap_time=90.0,
-            cumulative_time=0.0,
+            cumulative_time=0.0,  # P1 at front
             speed=300.0,  # Starting speed (km/h)
             gap_to_leader=0.0,  # No gap at start
+            lap_progress=0.0,  # Front of grid
             energy_deployment=60.0,
             tire_management=70.0,
             fuel_strategy=65.0,
@@ -126,17 +131,20 @@ class GameSessionManager:
         ]
 
         for i, (agent_type, name) in enumerate(opponent_names):
+            # Grid spacing: stagger cars by 1.5 seconds per position (simulates ~25m gap)
+            grid_offset = (i + 1) * 1.5  # 1.5s per grid position
+
             opponents.append(OpponentState(
                 name=name,
                 agent_type=agent_type,
                 position=i + 2,  # Positions 2-8
-                lap_progress=0.0,
+                lap_progress=(grid_offset / 90.0) / total_laps,  # Convert time offset to lap progress
                 battery_soc=100.0,
                 tire_life=100.0,
                 fuel_remaining=100.0,
-                cumulative_time=0.0,
+                cumulative_time=grid_offset,  # Stagger by grid position
                 speed=300.0,  # Starting speed (km/h)
-                gap_to_leader=0.0,  # No gap at start
+                gap_to_leader=grid_offset,  # Gap to P1 equals time offset
                 last_lap_time=90.0
             ))
 

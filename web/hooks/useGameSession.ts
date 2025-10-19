@@ -187,6 +187,13 @@ export const useGameSession = ({
         setOpponents(data.opponents || []);
         setIsRaining(Boolean(data.is_raining));
         setSafetyCarActive(Boolean(data.safety_car_active));
+
+        // Debug logging for car positions
+        console.log(`[LAP ${data.lap}] Player: pos=${data.player?.position}, lap_progress=${data.player?.lap_progress?.toFixed(4)}, speed=${Math.round(data.player?.speed || 0)} km/h, cumulative=${data.player?.cumulative_time?.toFixed(2)}s`);
+        data.opponents?.slice(0, 3).forEach((opp: OpponentState) => {
+          console.log(`[LAP ${data.lap}] ${opp.name}: pos=${opp.position}, lap_progress=${opp.lap_progress?.toFixed(4)}, speed=${Math.round(opp.speed || 0)} km/h, cumulative=${opp.cumulative_time?.toFixed(2)}s`);
+        });
+
         break;
       }
 

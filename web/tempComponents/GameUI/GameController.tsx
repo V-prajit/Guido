@@ -31,6 +31,9 @@ interface PlayerState {
   fuel_remaining: number;
   lap_time: number;
   cumulative_time: number;
+  speed: number;           // Backend-calculated speed (km/h)
+  lap_progress: number;    // Fine-grained position on track (0-1 normalized)
+  gap_to_leader: number;   // Time gap to race leader (seconds)
 }
 
 interface OpponentState {
@@ -42,6 +45,8 @@ interface OpponentState {
   tire_life: number;
   fuel_remaining: number;
   cumulative_time: number;
+  speed: number;           // Backend-calculated speed (km/h)
+  gap_to_leader: number;   // Time gap to race leader (seconds)
 }
 
 interface DecisionPoint {
@@ -87,8 +92,8 @@ const GameController: React.FC<GameControllerProps> = ({
       id: "player",
       driverName: "You",
       position: playerState.position,
-      lapProgress: currentLap / totalLaps,
-      speed: Math.max(0, 300 - (playerState.lap_time - 88) * 10),
+      lapProgress: playerState.lap_progress || (currentLap / totalLaps),  // Use backend fine-grained lap_progress
+      speed: playerState.speed || 300,  // Use backend-calculated speed
       lapTime: `${playerState.lap_time.toFixed(3)}`,
       isUserCar: true,
     });
@@ -100,7 +105,7 @@ const GameController: React.FC<GameControllerProps> = ({
         driverName: opp.name,
         position: opp.position,
         lapProgress: opp.lap_progress,
-        speed: 290 - (opp.position * 5),
+        speed: opp.speed || 290,  // Use backend-calculated speed
         lapTime: "1:32.000",
         isUserCar: false,
       });

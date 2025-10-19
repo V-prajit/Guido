@@ -243,42 +243,42 @@ export default function BentoLayout() {
 
         {/* Mid Section */}
         <div className="grid grid-cols-12 gap-4">
-          {/* Recommendations */}
-          <div className="col-span-9 bg-white border border-black rounded-lg p-6">
-            <h3 className="text-lg font-bold text-black mb-6 tracking-wide">MULTI-AGENT STRATEGY RECS</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {strategies.map((strategy, index) => (
-                <div
-                  key={strategy.id ?? index}
-                  onClick={() => handleStrategyClick(index)}
-                  className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-black hover:bg-black/5 ${
-                    selectedStrategy === index ? 'border-black bg-black/5' : 'border-black/40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-black">{strategy.name}</h4>
-                    {typeof strategy.confidence === 'number' && (
-                      <span className="text-[10px] font-bold text-black/50">
-                        {formatPercentage(strategy.confidence)}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-4xl font-bold text-black mb-4">{strategy.probability}</p>
-                  <p className="text-xs text-black/70 leading-relaxed">
-                    {strategy.explanation || 'Awaiting live recommendation data.'}
-                  </p>
-                  {decisionPoint && (
+          {/* Recommendations - Only show when decision point is active */}
+          {decisionPoint && (
+            <div className="col-span-9 bg-white border border-black rounded-lg p-6">
+              <h3 className="text-lg font-bold text-black mb-6 tracking-wide">MULTI-AGENT STRATEGY RECS</h3>
+              <div className="grid grid-cols-3 gap-4">
+                {strategies.map((strategy, index) => (
+                  <div
+                    key={strategy.id ?? index}
+                    onClick={() => handleStrategyClick(index)}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all hover:border-black hover:bg-black/5 ${
+                      selectedStrategy === index ? 'border-black bg-black/5' : 'border-black/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-bold text-black">{strategy.name}</h4>
+                      {typeof strategy.confidence === 'number' && (
+                        <span className="text-[10px] font-bold text-black/50">
+                          {formatPercentage(strategy.confidence)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-4xl font-bold text-black mb-4">{strategy.probability}</p>
+                    <p className="text-xs text-black/70 leading-relaxed">
+                      {strategy.explanation || 'Awaiting live recommendation data.'}
+                    </p>
                     <p className="mt-3 text-[11px] text-blue-600 font-semibold uppercase tracking-wide">
                       Click to apply immediately
                     </p>
-                  )}
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Agent Performance */}
-          <div className="col-span-3 bg-white border border-black rounded-lg p-4">
+          <div className={`bg-white border border-black rounded-lg p-4 ${decisionPoint ? 'col-span-3' : 'col-span-12'}`}>
             <h3 className="text-sm font-bold text-black mb-4 tracking-wide">RACE POSITIONS</h3>
             <div className="space-y-3">
               {playerState ? (
