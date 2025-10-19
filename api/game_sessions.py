@@ -20,14 +20,16 @@ class PlayerState:
     fuel_remaining: float  # 0-100
     lap_time: float
     cumulative_time: float
+    speed: float = 0.0  # Current speed (km/h) for visualization
+    gap_to_leader: float = 0.0  # Time gap to race leader (seconds)
 
     # Strategy parameters (6 variables)
-    energy_deployment: float
-    tire_management: float
-    fuel_strategy: float
-    ers_mode: float
-    overtake_aggression: float
-    defense_intensity: float
+    energy_deployment: float = 60.0
+    tire_management: float = 70.0
+    fuel_strategy: float = 65.0
+    ers_mode: float = 60.0
+    overtake_aggression: float = 50.0
+    defense_intensity: float = 50.0
 
 
 @dataclass
@@ -36,11 +38,14 @@ class OpponentState:
     name: str
     agent_type: str
     position: int
-    lap_progress: float  # 0-1 for visualization
+    lap_progress: float  # 0-1 for visualization (based on cumulative_time relative to leader)
     battery_soc: float
     tire_life: float
     fuel_remaining: float
     cumulative_time: float
+    speed: float = 0.0  # Current speed (km/h) for visualization
+    gap_to_leader: float = 0.0  # Time gap to race leader (seconds)
+    last_lap_time: float = 90.0  # Last lap time for speed calculation
 
 
 @dataclass
@@ -98,6 +103,8 @@ class GameSessionManager:
             fuel_remaining=100.0,
             lap_time=90.0,
             cumulative_time=0.0,
+            speed=300.0,  # Starting speed (km/h)
+            gap_to_leader=0.0,  # No gap at start
             energy_deployment=60.0,
             tire_management=70.0,
             fuel_strategy=65.0,
@@ -127,7 +134,10 @@ class GameSessionManager:
                 battery_soc=100.0,
                 tire_life=100.0,
                 fuel_remaining=100.0,
-                cumulative_time=0.0
+                cumulative_time=0.0,
+                speed=300.0,  # Starting speed (km/h)
+                gap_to_leader=0.0,  # No gap at start
+                last_lap_time=90.0
             ))
 
         # Create game state

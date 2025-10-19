@@ -32,6 +32,14 @@ class GameLoopOrchestrator:
         self.advisor = GameAdvisor()
         self.handled_events = set()  # Track which events we've already shown
 
+        # Timing configuration: adjust LAP_TIME_MULTIPLIER for demo speed
+        # 1.0 = realistic 90s laps (57 laps = 85 min race)
+        # 10.0 = fast 9s laps (57 laps = 8.5 min race)
+        # 50.0 = ultra-fast 1.8s laps (57 laps = 2.7 min race)
+        import os
+        self.lap_time_multiplier = float(os.getenv("LAP_TIME_MULTIPLIER", "50.0"))
+        self.base_lap_time = 90.0
+
     def advance_lap(self) -> Dict:
         """
         Simulate one lap for all racers.
@@ -67,9 +75,8 @@ class GameLoopOrchestrator:
         # Update positions
         self._update_race_positions(player_result, opponent_results)
 
-        # Update opponent lap progress for visualization
-        for opponent in self.game_state.opponents:
-            opponent.lap_progress = lap / self.game_state.total_laps
+        # Calculate speed, gap, and lap progress for visualization
+        self._update_visualization_metrics(lap)
 
         return {
             'lap': lap,
@@ -181,6 +188,7 @@ class GameLoopOrchestrator:
             lap_time += np.random.uniform(-1.0, 1.0)
 
             opponent.cumulative_time += lap_time
+            opponent.last_lap_time = lap_time  # Track for speed calculation
 
             results.append({
                 'agent': opponent.name,
@@ -215,6 +223,58 @@ class GameLoopOrchestrator:
             else:
                 opponent.position = position
 
+    def _update_visualization_metrics(self, current_lap: int):
+        """
+        Calculate speed, gap_to_leader, and lap_progress for smooth visualization.
+
+        Speed: Derived from lap_time (faster lap = higher speed)
+        Gap to leader: Time difference from leader's cumulative time
+        Lap progress: Position within current lap (0-1 per lap for smooth track animation)
+        """
+        # Find the race leader (lowest cumulative time)
+        all_racers = [self.game_state.player] + self.game_state.opponents
+        leader_time = min(racer.cumulative_time for racer in all_racers)
+
+        # Update player metrics
+        player = self.game_state.player
+        player.speed = self._calculate_speed(player.lap_time)
+        player.gap_to_leader = player.cumulative_time - leader_time
+
+        # Progress WITHIN current lap: 0-1 per lap for smooth animation around track
+        # Formula: (current_lap - 1 + fraction_through_lap) / total_laps
+        # This makes each car smoothly move from 0→1 per lap
+        # Account for timing multiplier (for demo speed control)
+        expected_lap_time = self.base_lap_time / self.lap_time_multiplier
+        expected_time_to_current_lap_start = (current_lap - 1) * expected_lap_time
+        fraction_through_lap = (player.cumulative_time - expected_time_to_current_lap_start) / expected_lap_time
+        fraction_through_lap = max(0.0, min(1.0, fraction_through_lap))  # Clamp 0-1
+        player.lap_progress = (current_lap - 1 + fraction_through_lap) / self.game_state.total_laps
+
+        # Update opponent metrics
+        for opponent in self.game_state.opponents:
+            opponent.speed = self._calculate_speed(opponent.last_lap_time)
+            opponent.gap_to_leader = opponent.cumulative_time - leader_time
+
+            # Same calculation for opponents
+            fraction_through_lap = (opponent.cumulative_time - expected_time_to_current_lap_start) / expected_lap_time
+            fraction_through_lap = max(0.0, min(1.0, fraction_through_lap))
+            opponent.lap_progress = (current_lap - 1 + fraction_through_lap) / self.game_state.total_laps
+
+    def _calculate_speed(self, lap_time: float) -> float:
+        """
+        Convert lap_time to approximate speed in km/h for visualization.
+
+        Faster laps = higher speed.
+        Base: 90s lap = 300 km/h
+        Every second faster/slower = ~10 km/h change
+        """
+        base_speed = 300.0  # km/h at 90s lap
+        speed_delta = (90.0 - lap_time) * 10.0  # Each second difference = 10 km/h
+        speed = base_speed + speed_delta
+
+        # Clamp to realistic F1 speeds (200-350 km/h)
+        return max(200.0, min(350.0, speed))
+
     def check_for_decision_point(self) -> Optional[Dict]:
         """
         Check if game should pause for player decision.
@@ -236,32 +296,28 @@ class GameLoopOrchestrator:
             safety_car=self.game_state.safety_car_active
         )
 
-        # Check for decision triggers
+        # Check for decision triggers (HIGH-IMPACT EVENTS ONLY)
         event_type = check_decision_point(current_state, self.handled_events)
 
         if event_type:
-            # Mark as handled
-            self.handled_events.add(event_type)
-
-            return {
-                'triggered': True,
-                'event_type': event_type,
-                'state': current_state
+            # Only trigger on specific high-impact events
+            high_impact_events = {
+                'RAIN_START', 'RAIN_STOP', 'SAFETY_CAR',
+                'BATTERY_LOW', 'BATTERY_CRITICAL',
+                'TIRE_CRITICAL'
             }
 
-        # Also trigger decision every 12 laps (strategic checkpoints)
-        if (self.game_state.current_lap % 12 == 0 and
-            self.game_state.current_lap > 0 and
-            f'LAP_{self.game_state.current_lap}' not in self.handled_events):
+            if event_type in high_impact_events:
+                # Mark as handled
+                self.handled_events.add(event_type)
 
-            self.handled_events.add(f'LAP_{self.game_state.current_lap}')
+                return {
+                    'triggered': True,
+                    'event_type': event_type,
+                    'state': current_state
+                }
 
-            return {
-                'triggered': True,
-                'event_type': 'STRATEGIC_CHECKPOINT',
-                'state': current_state
-            }
-
+        # No routine strategic checkpoints - car runs on configured parameters
         return {
             'triggered': False
         }
