@@ -116,7 +116,6 @@ export default function Box4({ className, style, children }: BoxProps) {
       <div className="relative z-[1] flex flex-1 flex-col p-6">
         <h3 className="text-lg font-bold text-text-primary mb-6 tracking-wide">
           MULTI-AGENTIC INSIGHTS
-          {loading && <span className="ml-2 text-xs text-text-secondary">Loading...</span>}
         </h3>
         <div className="grid grid-cols-3 gap-4">
           {strategies.map((strategy, index) => (

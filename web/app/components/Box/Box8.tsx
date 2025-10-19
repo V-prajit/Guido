@@ -46,8 +46,8 @@ export default function Box8({ className, style, children }: BoxProps) {
           {!gameStarted || displayHistory.length === 0 ? (
             <div className="text-xs text-text-secondary">Start race to see position history</div>
           ) : (
-            displayHistory.map((entry) => (
-              <div key={entry.lap} className="flex-1 flex flex-col items-center gap-1">
+            displayHistory.map((entry, index) => (
+              <div key={`${entry.lap}-${index}`} className="flex-1 flex flex-col items-center gap-1">
                 <div className="w-full bg-text-primary/20 rounded-t relative" style={{ height: '100px' }}>
                   <div
                     className="w-full bg-text-primary rounded-t absolute bottom-0"
