@@ -8,11 +8,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'f1-red': '#FF1801',
-        'f1-black': '#000000',
-        'f1-white': '#FFFFFF',
-        'f1-gray': '#333333',
-        'f1-blue': '#00A0E9',
+        'bg-primary': '#0f1729',
+        'bg-secondary': '#1a2332', 
+        'bg-tertiary': '#243040',
+        'border': '#3a4553',
+        'text-primary': '#e6edf3',
+        'text-secondary': '#8d96a0',
+        'text-muted': '#656d76',
+        'gold': '#daa520',
+        'gold-light': '#f4d03f',
+        'gold-dark': '#b8860b',
+        'navy': '#0f1729',
       },
     },
   },
