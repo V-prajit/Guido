@@ -14,7 +14,7 @@ const baseClasses =
 
 const defaultLayout: CSSProperties = {
   gridColumn: '10 / span 3',
-  gridRow: '1 / span 5',
+  gridRow: '6 / span 3',
 };
 
 const overlayStyle: CSSProperties = {
