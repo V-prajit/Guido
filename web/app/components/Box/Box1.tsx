@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from 'react';
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { motion } from "framer-motion";
 import { useGame } from "@/contexts/GameContext";
 import type { CarData } from "@/types";
@@ -11,8 +11,7 @@ interface TrackPoint {
   y: number;
 }
 
-// Real Bahrain International Circuit coordinates from GeoJSON
-// Converted and scaled for SVG viewport
+// Real Bahrain International Circuit coordinates, converted and scaled for SVG
 const BAHRAIN_TRACK_COORDINATES = [
   [50.510539, 26.031766], [50.510633, 26.034797], [50.510722, 26.036782],
   [50.510764, 26.036871], [50.510852, 26.036885], [50.510947, 26.036862],
@@ -48,9 +47,7 @@ const BAHRAIN_TRACK_COORDINATES = [
   [50.510539, 26.031766]
 ];
 
-// Convert GeoJSON coordinates to SVG path
 function convertToSVGPath(coordinates: number[][]): string {
-  // Find bounds
   const lons = coordinates.map(c => c[0]);
   const lats = coordinates.map(c => c[1]);
   const minLon = Math.min(...lons);
@@ -58,18 +55,16 @@ function convertToSVGPath(coordinates: number[][]): string {
   const minLat = Math.min(...lats);
   const maxLat = Math.max(...lats);
 
-  // Scale to SVG viewport (800x500 with padding)
   const padding = 50;
   const width = 800 - (padding * 2);
   const height = 500 - (padding * 2);
 
   const scaledPoints = coordinates.map(([lon, lat]) => {
     const x = ((lon - minLon) / (maxLon - minLon)) * width + padding;
-    const y = ((maxLat - lat) / (maxLat - minLat)) * height + padding; // Flip Y
+    const y = ((maxLat - lat) / (maxLat - minLat)) * height + padding;
     return [x, y];
   });
 
-  // Create SVG path
   let path = `M ${scaledPoints[0][0]} ${scaledPoints[0][1]}`;
   for (let i = 1; i < scaledPoints.length; i++) {
     path += ` L ${scaledPoints[i][0]} ${scaledPoints[i][1]}`;
@@ -81,7 +76,6 @@ function convertToSVGPath(coordinates: number[][]): string {
 
 const BAHRAIN_TRACK_PATH = convertToSVGPath(BAHRAIN_TRACK_COORDINATES);
 
-// Calculate point on path
 const getPointOnPath = (progress: number, pathElement: SVGPathElement): TrackPoint => {
   const length = pathElement.getTotalLength();
   const point = pathElement.getPointAtLength(progress * length);
@@ -111,7 +105,6 @@ export default function Box1({ cars, className, style }: BoxProps) {
   const { getCarsForTrack, gameStarted } = useGame();
   const pathRef = React.useRef<SVGPathElement>(null);
 
-  // Use real data from GameContext if available, otherwise empty array
   const displayCars = cars || (gameStarted ? getCarsForTrack() : []);
 
   const getCarPosition = (lapProgress: number): TrackPoint => {
@@ -125,133 +118,114 @@ export default function Box1({ cars, className, style }: BoxProps) {
   return (
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
-      <div className="relative z-[1] flex flex-1 flex-col p-6">
-        <h3 className="text-sm font-bold text-black mb-3 tracking-wide">RACE TRACK VIEW</h3>
-        <div className="h-[400px] -mx-4 -mb-4">
-            <div className="w-full h-full flex items-center justify-center bg-zinc-950">
-            <svg
-                viewBox="0 0 800 500"
-                className="w-full h-full"
-                style={{ filter: "drop-shadow(0 0 20px rgba(239, 68, 68, 0.15))" }}
-            >
-                <defs>
-                <filter id="glow">
-                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                    <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                    </filter>
+      <div className="relative z-[1] flex flex-1 flex-col p-4 items-center justify-center">
+        <h3 className="absolute top-3 text-sm font-bold text-gray-400 tracking-widest uppercase">
+          Live Race Track
+        </h3>
+        <div className="w-full h-full flex items-center justify-center">
+          <svg
+            viewBox="0 0 800 500"
+            className="w-full h-full"
+            style={{ filter: "drop-shadow(0 0 15px rgba(59, 130, 246, 0.25))" }}
+          >
+            <defs>
+              <linearGradient id="vibrantTrackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#06b6d4" />
+                <stop offset="50%" stopColor="#3b82f6" />
+                <stop offset="100%" stopColor="#8b5cf6" />
+              </linearGradient>
+            </defs>
 
-                <linearGradient id="trackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#ef4444" stopOpacity="0.8" />
-                    <stop offset="50%" stopColor="#dc2626" stopOpacity="0.9" />
-                    <stop offset="100%" stopColor="#b91c1c" stopOpacity="0.8" />
-                </linearGradient>
-                </defs>
+            <path
+              ref={pathRef}
+              d={BAHRAIN_TRACK_PATH}
+              fill="none"
+              stroke="url(#vibrantTrackGradient)"
+              strokeWidth="8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.9}
+            />
 
-                {/* Main Track */}
-                <path
-                ref={pathRef}
-                d={BAHRAIN_TRACK_PATH}
-                fill="none"
-                stroke="url(#trackGradient)"
-                strokeWidth="8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                filter="url(#glow)"
-                opacity="0.95"
-                />
+            <path
+              d={BAHRAIN_TRACK_PATH}
+              fill="none"
+              stroke="#475569"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity={0.4}
+            />
 
-                {/* Inner track line */}
-                <path
-                d={BAHRAIN_TRACK_PATH}
-                fill="none"
-                stroke="#991b1b"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity="0.4"
-                />
+            <motion.line
+              x1={BAHRAIN_TRACK_COORDINATES[0][0] * 10 - 455}
+              y1={BAHRAIN_TRACK_COORDINATES[0][1] * 10 - 220}
+              x2={BAHRAIN_TRACK_COORDINATES[0][0] * 10 - 445}
+              y2={BAHRAIN_TRACK_COORDINATES[0][1] * 10 - 220}
+              stroke="#ffffff"
+              strokeWidth="3"
+              strokeLinecap="round"
+              initial={{ opacity: 0.5 }}
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            />
 
-                {/* Start/Finish Line */}
-                <motion.line
-                x1={BAHRAIN_TRACK_COORDINATES[0][0] * 10 - 455}
-                y1={BAHRAIN_TRACK_COORDINATES[0][1] * 10 - 220}
-                x2={BAHRAIN_TRACK_COORDINATES[0][0] * 10 - 445}
-                y2={BAHRAIN_TRACK_COORDINATES[0][1] * 10 - 220}
-                stroke="#ffffff"
-                strokeWidth="3"
-                strokeLinecap="round"
-                initial={{ opacity: 0.5 }}
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                />
-
-                {/* Cars */}
-                {displayCars.map((car) => {
-                const position = getCarPosition(car.lapProgress);
-
-                return (
-                    <g key={car.id}>
-                    {/* Car glow */}
+            {displayCars.map((car) => {
+              const position = getCarPosition(car.lapProgress);
+              return (
+                <g key={car.id}>
+                  <motion.circle
+                    cx={position.x}
+                    cy={position.y}
+                    r={car.isUserCar ? 12 : 10}
+                    fill={car.isUserCar ? "#3b82f6" : "#ffffff"}
+                    opacity={0.2}
+                    initial={{ scale: 1 }}
+                    animate={{ scale: [1, 1.3, 1] }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                  <motion.circle
+                    cx={position.x}
+                    cy={position.y}
+                    r={car.isUserCar ? 8 : 6}
+                    fill={car.isUserCar ? "#3b82f6" : "#ffffff"}
+                    initial={{ scale: 0 }}
+                    animate={{
+                      scale: 1,
+                      filter: car.isUserCar
+                        ? "drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))"
+                        : "drop-shadow(0 0 4px rgba(255, 255, 255, 0.6))"
+                    }}
+                    transition={{
+                      scale: { type: "spring", stiffness: 300, damping: 20 },
+                      filter: { duration: 0.3 }
+                    }}
+                  />
+                  {car.isUserCar && (
                     <motion.circle
-                        cx={position.x}
-                        cy={position.y}
-                        r={car.isUserCar ? 12 : 10}
-                        fill={car.isUserCar ? "#3b82f6" : "#ffffff"}
-                        opacity={0.2}
-                        initial={{ scale: 1 }}
-                        animate={{ scale: [1, 1.3, 1] }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "easeInOut" }}
+                      cx={position.x}
+                      cy={position.y}
+                      r={14}
+                      fill="none"
+                      stroke="#3b82f6"
+                      strokeWidth="1.5"
+                      opacity={0.6}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{
+                        scale: [1, 1.4, 1],
+                        opacity: [0.6, 0.2, 0.6]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
                     />
-
-                    {/* Main car dot */}
-                    <motion.circle
-                        cx={position.x}
-                        cy={position.y}
-                        r={car.isUserCar ? 8 : 6}
-                        fill={car.isUserCar ? "#3b82f6" : "#ffffff"}
-                        initial={{ scale: 0 }}
-                        animate={{
-                        scale: 1,
-                        filter: car.isUserCar
-                            ? "drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))"
-                            : "drop-shadow(0 0 4px rgba(255, 255, 255, 0.6))"
-                        }}
-                        transition={{
-                        scale: { type: "spring", stiffness: 300, damping: 20 },
-                        filter: { duration: 0.3 }
-                        }}
-                    />
-
-                    {/* User car ring */}
-                    {car.isUserCar && (
-                        <motion.circle
-                        cx={position.x}
-                        cy={position.y}
-                        r={14}
-                        fill="none"
-                        stroke="#3b82f6"
-                        strokeWidth="1.5"
-                        opacity={0.6}
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{
-                            scale: [1, 1.4, 1],
-                            opacity: [0.6, 0.2, 0.6]
-                        }}
-                        transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: "easeInOut"
-                        }}
-                        />
-                    )}
-                    </g>
-                );
-                })}
-            </svg>
-            </div>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
         </div>
       </div>
     </section>
