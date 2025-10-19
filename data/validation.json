@@ -1,0 +1,10 @@
+{
+  "num_scenarios": 20,
+  "adaptive_wins": 6,
+  "adaptive_win_rate": 30.0,
+  "median_baseline_wins": 0,
+  "median_baseline_rate": 0.0,
+  "max_baseline_wins": 8,
+  "passed": true,
+  "playbook_loaded": true
+}

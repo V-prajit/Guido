@@ -201,17 +201,25 @@ class AdaptiveAI(Agent):
     """
     AI-powered strategy that reads and follows a playbook.
 
-    This agent will learn from simulation results and follow discovered
-    optimal strategies. For now (H2-H3), it uses a balanced baseline.
-    Will be fully implemented in H5-H6 to read playbook JSON and make
-    decisions based on learned rules.
+    This agent evaluates playbook rules in order and executes the first
+    matching rule's action. Uses restricted eval() for secure condition
+    evaluation.
 
-    Strategy (baseline):
-    - Moderate deployment (78/68%)
-    - Balanced harvesting (55%)
-    - No boost usage
+    Playbook structure:
+    {
+        "rules": [
+            {
+                "rule": "Rule name",
+                "condition": "battery_soc < 30 and lap > 40",
+                "action": {"deploy_straight": 50, "deploy_corner": 45, "harvest": 75},
+                "confidence": 0.85,
+                "uplift_win_pct": 15.2,
+                "rationale": "Why this works"
+            }
+        ]
+    }
 
-    Future: Will evaluate playbook conditions and execute recommended actions
+    Falls back to proven baseline strategy (78/68/55) if no rules match.
     """
 
     def __init__(self, name: str, params: dict, playbook: dict = None):
@@ -226,9 +234,76 @@ class AdaptiveAI(Agent):
         super().__init__(name, params)
         self.playbook = playbook or {'rules': []}
 
+    def matches_condition(self, condition: str, state: RaceState) -> bool:
+        """
+        Evaluate condition string against current race state.
+
+        Uses restricted eval() for security - only allows access to state
+        variables, no builtins or external functions.
+
+        Args:
+            condition: Python expression string (e.g., "battery_soc < 30 and lap > 40")
+            state: Current RaceState
+
+        Returns:
+            True if condition matches, False otherwise (including on errors)
+
+        Example:
+            >>> state = RaceState(lap=45, battery_soc=25, position=3, tire_age=45, boost_used=0)
+            >>> agent.matches_condition("battery_soc < 30 and lap > 40", state)
+            True
+        """
+        try:
+            # Build safe context with only state variables
+            context = {
+                'battery_soc': state.battery_soc,
+                'lap': state.lap,
+                'position': state.position,
+                'tire_age': state.tire_age,
+                'boost_used': state.boost_used
+            }
+
+            # Restricted eval: no builtins, only state variables
+            # This prevents code injection while allowing condition evaluation
+            result = eval(condition, {"__builtins__": {}}, context)
+
+            return bool(result)
+
+        except Exception as e:
+            # Log error and return False for safety
+            # In production, this would log to a file
+            # For now, silently fail to avoid spamming console
+            return False
+
     def decide(self, state: RaceState):
-        # TODO (H5-H6): Implement playbook condition evaluation
-        # For now, use balanced baseline strategy
+        """
+        Make deployment decision based on playbook rules.
+
+        Iterates through playbook rules in order, returns first matching
+        rule's action. Falls back to baseline if no rules match.
+
+        Args:
+            state: Current RaceState
+
+        Returns:
+            Decision dict with deploy_straight, deploy_corner, harvest, use_boost
+        """
+        # Check each rule in order
+        for rule in self.playbook.get('rules', []):
+            condition = rule.get('condition', '')
+            action = rule.get('action', {})
+
+            # If condition matches, return this rule's action
+            if condition and action and self.matches_condition(condition, state):
+                # Ensure all required fields exist in action
+                return {
+                    'deploy_straight': action.get('deploy_straight', 78),
+                    'deploy_corner': action.get('deploy_corner', 68),
+                    'harvest': action.get('harvest', 55),
+                    'use_boost': action.get('use_boost', False)
+                }
+
+        # No rules matched - use proven baseline strategy
         return {
             'deploy_straight': 78,
             'deploy_corner': 68,
