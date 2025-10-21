@@ -93,7 +93,8 @@ const baseClasses =
 
 const defaultLayout: CSSProperties = {
   gridColumn: '1 / span 3',
-  gridRow: '1 / span 8',
+  gridRow: '1 / span 7',
+  transform: 'translateY(5rem)',
 };
 
 const overlayStyle: CSSProperties = {
@@ -118,7 +119,7 @@ export default function Box1({ cars, className, style }: BoxProps) {
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
       <div className="relative z-[1] flex flex-1 flex-col p-4 items-center justify-center">
-        <h3 className="absolute top-3 text-xl font-bold text-gray-400 tracking-widest uppercase">
+        <h3 className="absolute top-3 text-sm font-bold text-gray-400 tracking-widest uppercase">
           Live Race Track
         </h3>
         <div className="w-full h-full flex items-center justify-center">

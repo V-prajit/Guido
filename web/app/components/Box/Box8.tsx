@@ -34,7 +34,7 @@ export default function Box8({ className, style, children }: BoxProps) {
     <section className={composedClassName} style={mergedStyle}>
       <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={overlayStyle} aria-hidden />
       <div className="relative z-[1] flex flex-1 flex-col p-4">
-        <h3 className="absolute top-3 text-lg font-bold text-gray-400 tracking-widest uppercase">
+        <h3 className="absolute top-3 text-sm font-bold text-gray-400 tracking-widest uppercase">
           Live Standings
         </h3>
         <div className="mt-10 flex flex-col space-y-1 overflow-y-auto pr-2">

@@ -530,6 +530,7 @@ async def game_websocket(websocket: WebSocket, session_id: str):
 
     game_state: GameState = None
     orchestrator: GameLoopOrchestrator = None
+    race_task: asyncio.Task = None  # Track background race loop task
 
     try:
         while True:
@@ -582,8 +583,10 @@ async def game_websocket(websocket: WebSocket, session_id: str):
                     'opponents': [asdict(opp) for opp in game_state.opponents]
                 })
 
-                # Start auto-advancing laps
-                await run_race_loop(websocket, orchestrator, game_state)
+                # Start auto-advancing laps as BACKGROUND TASK (non-blocking)
+                # This allows WebSocket handler to continue receiving messages (SELECT_STRATEGY, etc.)
+                race_task = asyncio.create_task(run_race_loop(websocket, orchestrator, game_state))
+                print(f"[{session_id}] ✓ Race loop started as background task")
 
             # ==========================================
             # SELECT STRATEGY
@@ -623,11 +626,27 @@ async def game_websocket(websocket: WebSocket, session_id: str):
     except WebSocketDisconnect:
         # Cleanup session on disconnect
         print(f"✓ Client disconnected: {session_id}")
+
+        # Cancel race loop task if running
+        if race_task and not race_task.done():
+            print(f"[{session_id}] Cancelling race loop task...")
+            race_task.cancel()
+            try:
+                await race_task
+            except asyncio.CancelledError:
+                print(f"[{session_id}] Race loop task cancelled")
+
         if game_state:
             session_manager.delete_session(game_state.session_id)
     except Exception as e:
         print(f"❌ WebSocket error: {e}")
         traceback.print_exc()
+
+        # Cancel race loop task if running
+        if race_task and not race_task.done():
+            print(f"[{session_id}] Cancelling race loop task due to error...")
+            race_task.cancel()
+
         try:
             await websocket.send_json({
                 'type': 'ERROR',
@@ -810,18 +829,16 @@ async def run_race_loop(websocket: WebSocket, orchestrator: GameLoopOrchestrator
             event_type = decision_check['event_type']
             current_state = decision_check['state']
 
-            # DEMO OPTIMIZATION: Use pre-computed decision for rain on lap 3
-            if event_type == 'RAIN_START' and orchestrator.pre_computed_decision is not None:
-                print("[DEMO] ✓ Using pre-computed rain decision (instant response!)")
-                recommendations = orchestrator.pre_computed_decision
-                recommendations['latency_ms'] = recommendations.get('latency_ms', 0)
-                recommendations['pre_computed'] = True
-            else:
-                # CRITICAL FIX: Use instant heuristic fallback (NEVER block the game!)
-                print(f"[DEMO] Pre-computation not ready, using instant heuristic fallback for {event_type}")
-                recommendations = generate_heuristic_recommendations(current_state, event_type)
-                recommendations['pre_computed'] = False
-                print(f"[DEMO] ✓ Instant fallback recommendations generated (0ms latency)")
+            # ALWAYS use instant heuristic fallback (0ms latency, no freeze!)
+            # Pre-computation runs in background for metrics only, never block on it
+            print(f"[DEMO] Using instant heuristic fallback for {event_type} (0ms latency)")
+            recommendations = generate_heuristic_recommendations(current_state, event_type)
+            recommendations['latency_ms'] = 0
+            recommendations['used_fallback'] = True
+
+            # Log if pre-computation finished (for performance metrics only)
+            if orchestrator.pre_computed_decision is not None:
+                print(f"[DEMO] ℹ️  Pre-compute finished in background (not used, for metrics only)")
 
             # Send decision point to client
             await websocket.send_json({
