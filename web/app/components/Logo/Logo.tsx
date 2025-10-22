@@ -8,7 +8,7 @@ export default function Logo() {
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    transform: 'translateY(-2.5rem)',
+    transform: 'translateY(-2rem)',
   };
 
   const textStyle: CSSProperties = {
